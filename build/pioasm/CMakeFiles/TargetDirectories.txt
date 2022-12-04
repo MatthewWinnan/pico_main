@@ -1,3 +1,0 @@
-/home/matthew/Dev/PICO/pico_workplace/build/pioasm/CMakeFiles/pioasm.dir
-/home/matthew/Dev/PICO/pico_workplace/build/pioasm/CMakeFiles/edit_cache.dir
-/home/matthew/Dev/PICO/pico_workplace/build/pioasm/CMakeFiles/rebuild_cache.dir
