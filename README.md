@@ -16,3 +16,5 @@ For usage in vscode it is important to have the following defined in your .bashr
 
 Also install the cmake and c/c++ config extentions for vscode. 
 A good help guide video can be found at https://www.youtube.com/watch?v=B5rQSoOmR5w
+
+Testing if commit works.
