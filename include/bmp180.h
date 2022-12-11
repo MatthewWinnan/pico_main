@@ -153,15 +153,11 @@ struct bmp180_model {
 //Mappings for the OSS mode of Pressure to variable input 
 uint16_t pressure_oss[4] = {BMP_180_SET_PRESS_OSS_0,BMP_180_SET_PRESS_OSS_1,BMP_180_SET_PRESS_OSS_2,BMP_180_SET_PRESS_OSS_3};
 //Mappings for out wait time in pressure mode
-uint16_t pressure_time[4] = {BMP_180_PRES_OSS_0,BMP_180_PRES_OSS_1,BMP_180_PRES_OSS_2,BMP_180_PRES_OSS_3};
-
-struct bmp180_model my_bmp180; //used as variable to pass to save the current BMP state.
-struct bmp180_calib_param calib_params; //used as variable to pass to save calibration params. Used further in code.
-struct bmp180_measurements my_bmp180_measurements; //used as a variable to store intermitent steps.  
+uint16_t pressure_time[4] = {BMP_180_PRES_OSS_0,BMP_180_PRES_OSS_1,BMP_180_PRES_OSS_2,BMP_180_PRES_OSS_3};  
 
 void bmp180_get_cal(struct bmp180_calib_param* params,struct bmp180_model* my_chip);
 
-void bmp180_init(struct bmp180_model* my_chip,struct bmp180_measurements* measures);
+void bmp180_init(struct bmp180_model* my_chip, struct bmp180_calib_param* my_params, struct bmp180_measurements* measures);
 
 //Here UT and UP stands for unprocessed temperature and -pressure respectively.
 void bmp180_get_ut(struct bmp180_model* my_chip);
@@ -179,11 +175,11 @@ void bmp180_get_altitude(struct bmp180_model* my_chip);
 void bmp180_get_sea_pressure(struct bmp180_model* my_chip);
 
 // Print functions to be called by Serial queries and debugging.
-void print_temp_results();
-void print_press_results();
-void print_altitude_results();
-void print_relative_pressure_results();
-void print_chip_ID();
-void print_cal_params();
+void print_temp_results(struct bmp180_model* my_chip);
+void print_press_results(struct bmp180_model* my_chip);
+void print_altitude_results(struct bmp180_model* my_chip);
+void print_relative_pressure_results(struct bmp180_model* my_chip);
+void print_chip_ID(struct bmp180_model* my_chip);
+void print_cal_params(struct bmp180_model* my_chip);
 
 #endif

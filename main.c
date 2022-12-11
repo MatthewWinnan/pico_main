@@ -25,7 +25,7 @@ void program_init(){
     global_i2c_init();
 
     //Init BMP180
-    bmp180_init(&my_bmp180,&my_bmp180_measurements);
+    bmp180_init(&my_bmp180, &calib_params, &my_bmp180_measurements);
 }
 
 int main() {

@@ -8,6 +8,11 @@
 #include "pico/cyw43_arch.h"
 #include "src/bmp180.c"
 #include "include/bmp180_i2c.h"
-#include "boards/pico.h"
+#include "boards/pico_w.h"
+
+//In order to use the bmp180 library initialize on object instance of each of the following structs
+struct bmp180_model my_bmp180; //used as variable to pass to save the current BMP state.
+struct bmp180_calib_param calib_params; //used as variable to pass to save calibration params. Used further in code.
+struct bmp180_measurements my_bmp180_measurements; //used as a variable to store intermitent steps.
 
 #endif

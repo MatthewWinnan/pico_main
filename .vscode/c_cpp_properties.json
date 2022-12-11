@@ -6,7 +6,8 @@
                 "${workspaceFolder}/**",
                 "/home/matthew/Dev/PICO/**",
                 "/home/matthew/Dev/PICO/pico-sdk/src/rp2_common/hardware_i2c/**",
-                "/home/matthew/Dev/PICO/pico-sdk/src/**"
+                "/home/matthew/Dev/PICO/pico-sdk/src/**",
+                "/home/matthew/Dev/PICO/pico-sdk/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
