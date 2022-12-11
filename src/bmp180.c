@@ -203,7 +203,7 @@ void print_temp_results(struct bmp180_model* my_chip)
 
 void print_press_results(struct bmp180_model* my_chip){
     printf("==== Pressure Measurement Results ==== \r\n");
-    printf("Obtained UP = %i \r\n",my_chip->measurement_params->p);
+    printf("Obtained UP = %i \r\n",my_chip->measurement_params->up);
 
     printf("Obtained B6 = %i \r\n",my_chip->measurement_params->B6);
     printf("Intermittent step X1_1 = %i \r\n",my_chip->measurement_params->X1_p_1);

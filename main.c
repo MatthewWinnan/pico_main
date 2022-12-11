@@ -26,6 +26,9 @@ void program_init(){
 
     //Init BMP180
     bmp180_init(&my_bmp180, &calib_params, &my_bmp180_measurements);
+
+    //Init the eeprom
+    lcb16b_eeprom_init(&my_eeprom);
 }
 
 int main() {

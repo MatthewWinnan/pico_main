@@ -11,7 +11,7 @@
 
 //I2C variables
 #define I2C_PORT i2c0
-#define I2C_BAUDRATE 400000 //400KHZ
+#define I2C_BAUDRATE 200000 //400KHZ
 
 //GPIO Variables
 #define GPIO_I2C0_SDA 4
