@@ -2,7 +2,9 @@
 #define __24LC16B_EEPROM__
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <math.h>
+#include <string.h>
 #include "24LC16B_EEPROM_i2c.h"
 
 /*
@@ -27,6 +29,9 @@ Currently this driver is configured to work with the pico SDK.
 #define LCB16B_START_REG _u(0x001) //First register that can be W/R to 24LC16B_DOC_8 (Excludes chip ID register)
 #define LCB16B_STOP_REG _u(0x7FF) //Last register that can be W/R to 24LC16B_DOC_8
 
+#define LCB16B_PAGE_WRITE_TIME_SAFETY _u(4) // Defines the scalar to scale LCB16B_PAGE_WRITE_TIME to form a safety margin
+#define LCB16B_PAGE_WRITE_TIME _u(5) // From 24LC16B_DOC_8 there is a max page write time of 5ms, make it wait 4X for safety
+
 #define LCB16B_INIT 1 //Flag to use to determine if new chipID should be written. If set to 0 will see if chipID can be read
 #define LCB16B_DEBUG 1 //Flag to determine if USB debut statements should be printed
 
@@ -37,12 +42,27 @@ Currently this driver is configured to work with the pico SDK.
 //LCB16B_STOP_REG then it starts back at LCB16B_START_REG  
 
 struct lcb16b_eeprom {
-    uint8_t chipID;
+    uint8_t chipID; //Stores the chipID for reference
     uint16_t pointer; //Points to what register we are currently at
 };
 
-//Functions
+//Helper functions
+
+// Returns control byte
+uint8_t return_device_address(uint16_t register_address);
+
+//Main Functions
+
+//Initializes the EEPROM
 void lcb16b_eeprom_init(struct lcb16b_eeprom* my_eeprom);
+
+//Writing functions
+
+//Performs a random write operation
+void lcb16b_eeprom_random_write(struct lcb16b_eeprom* my_eeprom, const uint8_t *src, uint8_t len);
+
+//Performs a random read operation
+void lcb16b_eeprom_random_read(struct lcb16b_eeprom* my_eeprom, const uint8_t *dst, uint8_t len);
 
 //Print functions to be grabbed by serial queries
 void print_eeprom_chip_ID(struct lcb16b_eeprom* my_eeprom);
