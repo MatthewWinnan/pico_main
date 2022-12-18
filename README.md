@@ -1,4 +1,4 @@
-# pico_main
+# PICO_MAIN
 Main repository to develop and test drivers for various micro controllers and devices. The aim is to make each generic enough to be used in any C based project.
 Examples of usage is written for the PICO-SDK
 
@@ -7,6 +7,7 @@ PICO-SDK documents: https://raspberrypi.github.io/pico-sdk-doxygen/index.html
 
 The following drivers have been made:
 1) BMP-180: Data-Sheet -> https://cdn-shop.adafruit.com/datasheets/BST-BMP180-DS000-09.pdf
+2) 24LC16B: Data-Sheet -> https://pdf1.alldatasheet.com/datasheet-pdf/view/515802/MICROCHIP/24LC16B.html
 
 It is important to install the cmake and c/c++ config extentions for vscode. 
 A good help guide video can be found at https://www.youtube.com/watch?v=B5rQSoOmR5w
