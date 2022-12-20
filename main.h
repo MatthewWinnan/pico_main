@@ -6,10 +6,12 @@
 #include <stdio.h>
 #include "pico/stdlib.h"
 #include "pico/cyw43_arch.h"
-#include "src/bmp180.c"
-#include "src/24lc16b_eeprom.c"
+#include "include/bmp180.h"
+#include "include/24LC16B_EEPROM.h"
+#include "include/com_protocol.h"
 #include "include/bmp180_i2c.h"
 #include "boards/pico_w.h"
+#include "include/i2c_config.h"
 
 //In order to use the bmp180 library initialize on object instance of each of the following structs
 struct bmp180_model my_bmp180; //used as variable to pass to save the current BMP state.

@@ -68,7 +68,5 @@ void lcb16b_eeprom_random_read(struct lcb16b_eeprom* my_eeprom, uint8_t *dst, ui
 //Performs a read to the address pointed to by register
 void lcb16b_eeprom_point_read(struct lcb16b_eeprom* my_eeprom, uint8_t *dst, uint8_t len, uint16_t reg);
 
-//Print functions to be grabbed by serial queries
-void print_eeprom_chip_ID(struct lcb16b_eeprom* my_eeprom);
 
 #endif

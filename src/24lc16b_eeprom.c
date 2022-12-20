@@ -1,4 +1,6 @@
 #include "../include/24LC16B_EEPROM.h"
+#include "../include/com_protocol.h"
+// #include "com_protocol.c"
 
 uint8_t return_device_address(uint16_t register_address){
     /*
@@ -188,8 +190,4 @@ void lcb16b_eeprom_point_read(struct lcb16b_eeprom* my_eeprom, uint8_t *dst, uin
     // We can then use random read to complete the functionality
     lcb16b_eeprom_random_read(my_eeprom,dst,len);
 
-}
-
-void print_eeprom_chip_ID(struct lcb16b_eeprom* my_eeprom){
-    printf("For 24LC16B eeprom ChipID = %u \r\n",my_eeprom->chipID);
 }
