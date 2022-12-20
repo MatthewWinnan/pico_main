@@ -32,8 +32,9 @@ void bmp180_get_cal(struct bmp180_calib_param* params,struct bmp180_model* my_ch
     my_chip->cal_params = params;
 
     //Print  out the callibrated data 
+    #if BMP_180_DEBUG_MODE
     print_cal_params(my_chip);
-
+    #endif
 }
 
 void bmp180_init(struct bmp180_model* my_chip, struct bmp180_calib_param* my_params, struct bmp180_measurements* measures) {
@@ -52,7 +53,11 @@ void bmp180_init(struct bmp180_model* my_chip, struct bmp180_calib_param* my_par
     //Basic check to see if the BMP180 is operational and in future configure the modes.
     // At BMP180_DOC_19 it states the device needs 10 ms to start up. Only needs to be more
     sleep_ms(1000); //it may say 10ms but that might be purely buffers. In practice needs 1s to boot.
+
+    #if BMP_180_DEBUG_MODE
     printf("Starting BMP180 setup\r\n");
+    #endif
+
     uint8_t chipID[1];
     uint8_t addr = BMP_180_CHIP_ID_ADDR;
 
@@ -60,14 +65,18 @@ void bmp180_init(struct bmp180_model* my_chip, struct bmp180_calib_param* my_par
 
     if (chipID[0] != BMP_180_CHIP_ID){
         while (true){
+            #if BMP_180_DEBUG_MODE
             printf("BMP180 was not configured correctly :(.\r\n");
             printf("Obtained values. chipID = %d, expected = %d \r\n",chipID[0],BMP_180_CHIP_ID);
+            #endif
             sleep_ms(5000);
         }   
     }
     else {
+        #if BMP_180_DEBUG_MODE
         printf("BMP180 was configured correctly :)\r\n");
         printf("Obtained values. chipID = %d, expected = %d \r\n",chipID[0],BMP_180_CHIP_ID);
+        #endif
     }
     //Write the ID to model
     my_chip->chipID = chipID[0];

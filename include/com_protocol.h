@@ -8,6 +8,8 @@
 #include "boards/pico_w.h"
 #include "bmp180.h"
 #include "24LC16B_EEPROM.h"
+#include "pico/util/queue.h"
+#include "/home/matthew/Dev/PICO/pico-sdk/src/host/pico_multicore/include/pico/multicore.h"
 
 /*
 This will serve as the main interface to be used for general communication between the PICO and the outside world.
@@ -23,9 +25,41 @@ The idea here is that it is DEBUG after all.
 Additionally the I2C libraries have their own error messages for debugging.
 */
 
-// Will tinyUSB be used as the main communications?
-#define USE_USB 1
+#define USE_USB 1 // Will tinyUSB be used as the main communications?
+#define COM_PROTO_DEBUG 1 // Will USB debug be printed out?
+#define COM_PROTO_RX_WAIT _u(10000) //Wait for COM_PROTO_RX_WAIT us for some buffer input
+#define COM_PROTO_RX_BUFFER_SIZE _u(1024) // Buffer size for stdin
 
+// Main variables
+// Declare a queue entry
+typedef struct
+{
+    void *func;
+    int32_t data;
+} queue_entry_t;
+
+// Define our queues to be used
+
+// com_protocol will add the needed entry to be used by main
+queue_t call_queue;
+// Here results are added by main to be printed by com_protocol
+queue_t results_queue;
+
+// Define helpers
+
+// Reads characters to buffer
+uint16_t read_stdin(char *buffer);
+
+// Waits until the rx buffer is clean
+void clean_rx_buff();
+
+// Define main functions
+
+// Initializer
+void com_protocol_init();
+
+// Main entry loop
+void com_protocol_entry();
 
 // Define bulk printing functions here
 

@@ -38,8 +38,10 @@ void lcb16b_eeprom_init(struct lcb16b_eeprom* my_eeprom){
     if (read_buff[0] != LCB16B_CHIP_ID)
     {
         while(true){
+            #if LCB16B_DEBUG
             printf("The 24LC16B eeprom was not configured correctly :(\r\n");
             printf("Obtained values. chipID = %d, expected = %d \r\n",read_buff[0],LCB16B_CHIP_ID);
+            #endif
             sleep_ms(5000);
         }
     }
