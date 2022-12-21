@@ -1,5 +1,13 @@
 #include "../include/com_protocol.h"
 
+uint16_t pow_10(uint8_t exponent){
+    uint16_t output = 1;
+    for (uint8_t i = 0; i < exponent; i++){
+        output *= 10;
+    }
+    return output;
+}
+
 void clean_rx_buff(){
     //Create state variables
     bool bflag = true;
@@ -42,7 +50,14 @@ void clean_cmd_line(struct cmd* cmd_line){
         cmd_line->int_arg[i] = 0;
     }
 
+    // Clean the temp array
+    for (uint8_t i = 0; i<cmd_line->int_tmp_len; i++){
+        cmd_line->int_tmp[i] = 0;
+    }
+
+    cmd_line->int_tmp_len = 0;
     cmd_line->arg_len = 0;
+    cmd_line->int_arg_len = 0;
 }
 
 // Read in stdin into the cmd holder
@@ -52,15 +67,21 @@ void read_stdin_to_cmd(char *std_in, uint16_t *len, struct cmd* cmd_line){
     0 - Reading in command
     1 - Reading in arguments
     2 - Done unless more arguments
+    3 - Reading in argument values
     */
     uint8_t state = 0;
 
-    for (uint16_t i = 0; i<*len;i++){
+    // We have that last terminate character to read in so read until len + 1
+    for (uint16_t i = 0; i<*len+1;i++){
         switch (state){
             case 0:
-                if ((uint8_t)std_in[i] == 32){
+                if ((uint8_t)std_in[i] == 0){
+                    // This is a null character thus we treat it as an escape to be done
+                    cmd_line->cmd_len = i ;
+                }
+                else if ((uint8_t)std_in[i] == 32){
                     // This is a space thus the command read is done
-                    cmd_line->cmd_len = i - 1;
+                    cmd_line->cmd_len = i ;
                 }
                 else if ((uint8_t)std_in[i] == 45){
                     // This is the character -, thus arguments are starting so switch over
@@ -76,7 +97,8 @@ void read_stdin_to_cmd(char *std_in, uint16_t *len, struct cmd* cmd_line){
                     // This is a space thus the arg read is done
                     state = 2;
                 }
-                else{
+                else if ((uint8_t)std_in[i] != 0){
+                    // Also ignore terminate char if found
                     // Here we read in the arguments
                     cmd_line->args[cmd_line->arg_len] = std_in[i];
                     cmd_line->arg_len += 1;
@@ -84,11 +106,55 @@ void read_stdin_to_cmd(char *std_in, uint16_t *len, struct cmd* cmd_line){
                 break;
             
             case 2:
+                
                 if ((uint8_t)std_in[i] == 45){
                     // This is the character -, thus arguments are starting so switch over
                     state = 1;
                 }
+                else if (((uint8_t)std_in[i] != 32) && ((uint8_t)std_in[i] != 45)){
+                    // Not a - or space. Assume value since we are here
+                    // Here we move to value read and read in the first valid value if a value is expected
+                    if ((cmd_line->int_arg_len < cmd_line->arg_len) && ((uint8_t) std_in[i] >= 48)){
+                    state = 3;
+                    // Add to the temp array
+                    cmd_line->int_tmp[cmd_line->int_tmp_len] = (uint8_t) std_in[i] - 48;
+                    cmd_line->int_tmp_len += 1;
+                    } 
+                }
                 break;
+            
+            case 3:
+                if ((uint8_t)std_in[i] == 0){
+                    // This is a null character thus we treat it as an escape to be done
+                    // Read in the temp 
+                    for ( uint8_t v = 0; v<cmd_line->int_tmp_len; v++){
+                        cmd_line->int_arg[cmd_line->int_arg_len] += cmd_line->int_tmp[v] * pow_10(cmd_line->int_tmp_len - 1 - v);
+                    }
+                    // Reset the temp
+                    memset( cmd_line->int_tmp, 0 , cmd_line->int_tmp_len);
+                    cmd_line->int_tmp_len = 0;
+                    // Increment the int arg amount
+                    cmd_line->int_arg_len += 1;
+                }
+                else if ((uint8_t)std_in[i] == 32){
+                    // This is a space thus the value read is done
+                    state = 2;
+
+                    // Read in the temp 
+                    for ( uint8_t v = 0; v<cmd_line->int_tmp_len; v++){
+                        cmd_line->int_arg[cmd_line->int_arg_len] += cmd_line->int_tmp[v] * pow_10(cmd_line->int_tmp_len - 1 - v);
+                    }
+                    // Reset the temp
+                    memset( cmd_line->int_tmp, 0 , cmd_line->int_tmp_len);
+                    cmd_line->int_tmp_len = 0;
+                    // Increment the int arg amount
+                    cmd_line->int_arg_len += 1;
+                }
+                else if ((cmd_line->int_arg_len < cmd_line->arg_len) && ((uint8_t) std_in[i] >= 48)){
+                    // Add to the temp array
+                    cmd_line->int_tmp[cmd_line->int_tmp_len] = (uint8_t) std_in[i] - 48;
+                    cmd_line->int_tmp_len += 1;
+                } 
         }
     }
 }
@@ -115,7 +181,8 @@ uint16_t read_stdin_usb(char *buffer){
         else {
             // We did receive something, set enter to false so we can disable the exit condition until the user is done
             enter = false;
-            if (index < COM_PROTO_RX_BUFFER_SIZE)
+            // We need one free character for a termination point
+            if (index < (COM_PROTO_RX_BUFFER_SIZE - 1))
             {
                 #if COM_PROTO_DEBUG
                 printf("Found result %i \r\n",result);
@@ -132,7 +199,10 @@ uint16_t read_stdin_usb(char *buffer){
                     case 8:
                         // This is the backspace. We treat it as if a character was deleted. 
                         // We move index back , so another character can be written over
+                        // Only move back if no underflow will occur
+                        if ( index > 0){
                         index -= 1;
+                        }
                         break;
                     
                     case 13:
@@ -154,20 +224,21 @@ uint16_t read_stdin_usb(char *buffer){
                             printf("Assigning %c = %i to index %i \r\n",(char) result,result, index);
                             #endif
                             // Only add if smaller than buffer size
-                            if ( index < COM_PROTO_RX_BUFFER_SIZE){
                             buffer[index] = (char) result;
                             index += 1;
-                            }
-                            else{
-                                return index - 1;
-                            }
                         }
                         break;
                 }
             }
+            else {
+                // Index is now overflowing return
+                buffer[index - 1] = (char) 0;
+                return index;
+            }
         }
     }
-
+    // Normal return 
+    buffer[index] = (char) 0;
     return index;
 }
 
@@ -201,8 +272,11 @@ void com_protocol_entry(){
     memset( cmd_line.command, '\0', sizeof( cmd_line.command ));
     memset( cmd_line.args, '\0', sizeof( cmd_line.args ));
     memset( cmd_line.int_arg, 0 , sizeof( cmd_line.int_arg ));
+    memset( cmd_line.int_tmp, 0 , sizeof(cmd_line.int_tmp));
     cmd_line.arg_len = 0;
     cmd_line.cmd_len = 0;
+    cmd_line.int_arg_len = 0;
+    cmd_line.int_tmp_len = 0;
     // Store the length of the command
     uint16_t len_str;
     // First clean RX
@@ -212,13 +286,18 @@ void com_protocol_entry(){
         // If any user input read it
         len_str = read_stdin(stdin_buffer);
 
-        // Read in the command
-        read_stdin_to_cmd(stdin_buffer,&len_str,&cmd_line);
-
+        // Read in the command if len != 0
+        if ( len_str != 0 ){
+            read_stdin_to_cmd(stdin_buffer,&len_str,&cmd_line);
+        }
         //For debugging
         #if COM_PROTO_DEBUG
         if ( len_str != 0 ){
             printf("Obtained command %s with char length %i.\r\nArguments were %s with length %i \r\n",cmd_line.command,cmd_line.cmd_len,cmd_line.args,cmd_line.arg_len);
+            for (uint8_t i = 0; i<cmd_line.int_arg_len; i++)
+            {
+                printf("At index %i the value is %i :\r\n",i,cmd_line.int_arg[i]);
+            }
         }
         else{
             printf("No input was obtained :( \r\n");

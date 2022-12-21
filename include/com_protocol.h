@@ -15,7 +15,7 @@
 /*
 TODO:
 Fix multicore and pico_w includes not showing up through the linter.
-Implement the int_arg functionality
+Add checks to keep cmd's arrays within max and min array indices.
 */
 
 /*
@@ -37,9 +37,14 @@ Options are fed by prefixing some str/char with -
 If a str is prefixed by - then each char will be a separate option
 
 For example:
-bmp180 -h -> prints the bmp180 help function.
-bmp180 -hs -> Prints the bmp180 help, then executes function bmp180_get_measurement and gets the results.
-bmp180 -h -s -> Prints the bmp180 help, then executes function bmp180_get_measurement and gets the results.
+bmp180 -h -> Executes bmp180 with argument h.
+bmp180 -hs -> Executes bmp180 with argument h and s.
+bmp180 -h -s -> Executes bmp180 with argument h and s.
+
+For argument values this holds :
+<command> -a -r 40 60 -> Executes command with argument a which has an input value of 40. And argument r with input 60.
+<command> -ar 40 60 -> Executes command with argument a which has an input value of 40. And argument r with input 60.
+<command> -a 40 -r 60 -> Executes command with argument a which has an input value of 40. And argument r with input 60.
 
 On default of no option is given the help function will be printed.
 
@@ -76,6 +81,12 @@ struct cmd{
     // Holds the integer arguments. The index of each corresponds to the index of the main arg.
     // For example command 24lc16b -a 50 -w 100 would write 100 to address 50
     uint32_t int_arg[COM_PROTO_ARG_ARRAY_SIZE];
+    // Holds current list of argument values, must be equal or smaller than arg_len
+    uint8_t int_arg_len;
+    // Temp array to help the integer value to be converted to integer (weird sentence)
+    uint8_t int_tmp[COM_PROTO_ARG_ARRAY_SIZE];
+    // Hold the n amount of numbers present
+    uint8_t int_tmp_len;
 };
 
 // Declare a queue entry
@@ -93,6 +104,9 @@ queue_t call_queue;
 queue_t results_queue;
 
 // Define helpers
+
+// Calculate powers of 10
+uint16_t pow_10(uint8_t exponent);
 
 // Reads characters to buffer
 uint16_t read_stdin(char *buffer);
