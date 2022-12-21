@@ -17,13 +17,6 @@
 #define GPIO_I2C0_SDA 4
 #define GPIO_I2C0_SCL 5
 
-void global_i2c_init(){
-    //Initialize the I2C
-    i2c_init(I2C_PORT,I2C_BAUDRATE);
-    gpio_set_function(GPIO_I2C0_SDA, GPIO_FUNC_I2C);
-    gpio_set_function(GPIO_I2C0_SCL, GPIO_FUNC_I2C);
-    gpio_pull_up(GPIO_I2C0_SDA);
-    gpio_pull_up(GPIO_I2C0_SCL);
-}
+void global_i2c_init();
 
 #endif 

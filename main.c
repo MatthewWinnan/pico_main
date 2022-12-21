@@ -12,6 +12,7 @@ void toggle_led(uint8_t* led_state) {
 
 }
 
+
 void program_init(){
     // Initialize all standard stdio types linked with binary.
     stdio_init_all();
@@ -29,6 +30,9 @@ void program_init(){
 
     //Init the eeprom
     lcb16b_eeprom_init(&my_eeprom);
+
+    //Init the com protocol
+    com_protocol_init();
 }
 
 int main() {
@@ -44,7 +48,7 @@ int main() {
         sleep_ms(2000);
         toggle_led(&LED_STATE);
         // Take measurements
-        bmp180_get_measurement(&my_bmp180);
+        //bmp180_get_measurement(&my_bmp180);
     }
 }
 

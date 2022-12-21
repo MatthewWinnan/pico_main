@@ -32,7 +32,7 @@ Currently this driver is configured to work with the pico SDK.
 #define LCB16B_PAGE_WRITE_TIME_SAFETY _u(4) // Defines the scalar to scale LCB16B_PAGE_WRITE_TIME to form a safety margin
 #define LCB16B_PAGE_WRITE_TIME _u(5) // From 24LC16B_DOC_8 there is a max page write time of 5ms, make it wait 4X for safety
 
-#define LCB16B_INIT 1 //Flag to use to determine if new chipID should be written. If set to 0 will see if chipID can be read
+#define LCB16B_INIT 0 //Flag to use to determine if new chipID should be written. If set to 0 will only see if chipID can be read
 #define LCB16B_DEBUG 1 //Flag to determine if USB debut statements should be printed
 
 // Objects used to decribe the chip
@@ -68,7 +68,5 @@ void lcb16b_eeprom_random_read(struct lcb16b_eeprom* my_eeprom, uint8_t *dst, ui
 //Performs a read to the address pointed to by register
 void lcb16b_eeprom_point_read(struct lcb16b_eeprom* my_eeprom, uint8_t *dst, uint8_t len, uint16_t reg);
 
-//Print functions to be grabbed by serial queries
-void print_eeprom_chip_ID(struct lcb16b_eeprom* my_eeprom);
 
 #endif
