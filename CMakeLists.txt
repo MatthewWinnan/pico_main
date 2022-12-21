@@ -34,9 +34,13 @@ pico_add_extra_outputs(${PROJECT_NAME})
 #example_auto_set_url(${PROJECT_NAME})
 
 # Link to pico_stdlib (gpio, time, etc. functions)
+# Link to pico_cyw43_arch_none (for the cyw43 module)
+# Link to pico_multicore 
+# Link to hardware_i2c (for i2c communications)
 target_link_libraries(${PROJECT_NAME} 
     pico_stdlib
     pico_cyw43_arch_none
+    pico_multicore
     hardware_i2c
 )
 

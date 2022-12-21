@@ -30,6 +30,9 @@ void program_init(){
 
     //Init the eeprom
     lcb16b_eeprom_init(&my_eeprom);
+
+    //Init the com protocol
+    com_protocol_init();
 }
 
 int main() {
@@ -45,7 +48,7 @@ int main() {
         sleep_ms(2000);
         toggle_led(&LED_STATE);
         // Take measurements
-        bmp180_get_measurement(&my_bmp180);
+        //bmp180_get_measurement(&my_bmp180);
     }
 }
 

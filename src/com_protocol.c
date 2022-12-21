@@ -12,39 +12,170 @@ void clean_rx_buff(){
             // We are done cleaning
             bflag = false;
             #if COM_PROTO_DEBUG
-            printf("RX buffer now clean :D.\n");
+            printf("RX buffer now clean :D.\r\n");
             #endif
         }
     }
 }
 
-// Read in stdin and return length of string
-uint16_t read_stdin(char *buffer){
+void clean_stdin(char *buffer, uint16_t *len){
+    // Just cleans the stdin after use
+    for (uint16_t i = 0; i<*len; i++){
+        buffer[i] = 0;
+    }
+}
+
+void clean_cmd_line(struct cmd* cmd_line){
+    // Clean the command
+    for (uint16_t i = 0; i<cmd_line->cmd_len; i++){
+        cmd_line->command[i] = (char) 0;
+    }
+    cmd_line->cmd_len = 0;
+
+    // Clean the args
+    for (uint16_t i = 0; i<cmd_line->arg_len; i++){
+        cmd_line->args[i] = (char) 0;
+    }
+
+    // Clean the additional arg values
+    for (uint16_t i = 0; i<cmd_line->arg_len; i++){
+        cmd_line->int_arg[i] = 0;
+    }
+
+    cmd_line->arg_len = 0;
+}
+
+// Read in stdin into the cmd holder
+void read_stdin_to_cmd(char *std_in, uint16_t *len, struct cmd* cmd_line){
+    /*
+    State variable:
+    0 - Reading in command
+    1 - Reading in arguments
+    2 - Done unless more arguments
+    */
+    uint8_t state = 0;
+
+    for (uint16_t i = 0; i<*len;i++){
+        switch (state){
+            case 0:
+                if ((uint8_t)std_in[i] == 32){
+                    // This is a space thus the command read is done
+                    cmd_line->cmd_len = i - 1;
+                }
+                else if ((uint8_t)std_in[i] == 45){
+                    // This is the character -, thus arguments are starting so switch over
+                    state = 1;
+                }
+                else{
+                    cmd_line->command[i] = std_in[i];
+                }
+                break;
+            
+            case 1:
+                if ((uint8_t)std_in[i] == 32){
+                    // This is a space thus the arg read is done
+                    state = 2;
+                }
+                else{
+                    // Here we read in the arguments
+                    cmd_line->args[cmd_line->arg_len] = std_in[i];
+                    cmd_line->arg_len += 1;
+                }
+                break;
+            
+            case 2:
+                if ((uint8_t)std_in[i] == 45){
+                    // This is the character -, thus arguments are starting so switch over
+                    state = 1;
+                }
+                break;
+        }
+    }
+}
+
+// Read in stdin and return length of string. This is the RX USB implementation.
+uint16_t read_stdin_usb(char *buffer){
     //Create state variables
     bool bflag = true;
+    bool enter = true;
     int result;
     uint16_t index = 0;
 
     while (bflag){
+        // I did not want some infinite wait. As such I read straight from stdin intead of using scanf and the likes.
+        // PS I could play around with tinyUSB to trigger IRQ but nah that's a future project ;P
         result = getchar_timeout_us((uint32_t) COM_PROTO_RX_WAIT);
-        if ( result == PICO_ERROR_TIMEOUT) {
+        if ( (result == PICO_ERROR_TIMEOUT) && (enter)) {
             // We are done cleaning
             bflag = false;
             #if COM_PROTO_DEBUG
-            printf("RX buffer now clean :D.\n");
+            printf("Done reading :D.\r\n");
             #endif
         }
         else {
+            // We did receive something, set enter to false so we can disable the exit condition until the user is done
+            enter = false;
             if (index < COM_PROTO_RX_BUFFER_SIZE)
             {
-                // Only add if smaller than buffer size
-                buffer[index] = (char) result;
-                index += 1;
+                #if COM_PROTO_DEBUG
+                printf("Found result %i \r\n",result);
+                #endif
+
+                // Based on the character we find we do some generic operations
+                // Special characters are treated first
+                switch (result){
+                    case 3:
+                        // This is the text end character. Triggered by Ctrl+C
+                        // Just escape
+                        return index;
+                        
+                    case 8:
+                        // This is the backspace. We treat it as if a character was deleted. 
+                        // We move index back , so another character can be written over
+                        index -= 1;
+                        break;
+                    
+                    case 13:
+                        // This is a CR. We are going to a new line thus we can assume ENTER was used.
+                        // This can be triggered by ENTER, Ctrl+M
+                        enter = true; // We can now escape the loop
+                        break;
+
+                    case 24:
+                        // This is a CAN, here we assume the user has canceled their input. Return 0
+                        // This is done by Ctrl+X
+                        return 0;
+
+                    default:
+                        // Non special character, however we only accept [32,126] as useful input, thus here we filter useless out.
+                        // Further we only accept a buffer size of COM_PROTO_RX_BUFFER_SIZE. If it so happen to be more exit the program 
+                        if ((result > 31) && (result < 127)){
+                            #if COM_PROTO_DEBUG
+                            printf("Assigning %c = %i to index %i \r\n",(char) result,result, index);
+                            #endif
+                            // Only add if smaller than buffer size
+                            if ( index < COM_PROTO_RX_BUFFER_SIZE){
+                            buffer[index] = (char) result;
+                            index += 1;
+                            }
+                            else{
+                                return index - 1;
+                            }
+                        }
+                        break;
+                }
             }
         }
     }
 
     return index;
+}
+
+// Main entry for read. On compile time the correct function will be entered here.
+uint16_t read_stdin(char *buffer){
+    #if USE_USB
+    return read_stdin_usb(buffer);
+    #endif
 }
 
 // Init function
@@ -54,7 +185,7 @@ void com_protocol_init()
     queue_init(&results_queue, sizeof(int32_t), 2);
 
     #if COM_PROTO_DEBUG
-    printf("Spinning up communication interface.\n");
+    printf("Spinning up communication interface.\r\n");
     #endif
 
     multicore_launch_core1(com_protocol_entry);
@@ -63,7 +194,16 @@ void com_protocol_init()
 // Main function entry point
 void com_protocol_entry(){
     // We create some buffer to store the inputs
-    char stdin_buffer[COM_PROTO_RX_BUFFER_SIZE];
+    char stdin_buffer[COM_PROTO_RX_BUFFER_SIZE] = {0};
+    // Initialize the command holder
+    struct cmd cmd_line;
+    // Setting the defaults for cmd_line
+    memset( cmd_line.command, '\0', sizeof( cmd_line.command ));
+    memset( cmd_line.args, '\0', sizeof( cmd_line.args ));
+    memset( cmd_line.int_arg, 0 , sizeof( cmd_line.int_arg ));
+    cmd_line.arg_len = 0;
+    cmd_line.cmd_len = 0;
+    // Store the length of the command
     uint16_t len_str;
     // First clean RX
     clean_rx_buff();    
@@ -71,6 +211,24 @@ void com_protocol_entry(){
     while(1){
         // If any user input read it
         len_str = read_stdin(stdin_buffer);
+
+        // Read in the command
+        read_stdin_to_cmd(stdin_buffer,&len_str,&cmd_line);
+
+        //For debugging
+        #if COM_PROTO_DEBUG
+        if ( len_str != 0 ){
+            printf("Obtained command %s with char length %i.\r\nArguments were %s with length %i \r\n",cmd_line.command,cmd_line.cmd_len,cmd_line.args,cmd_line.arg_len);
+        }
+        else{
+            printf("No input was obtained :( \r\n");
+        }
+        #endif
+
+        // Clean stdin after reading
+        clean_stdin(stdin_buffer, &len_str);
+        // Clean cmd_line after reading
+        clean_cmd_line(&cmd_line);
     }
 }
 
