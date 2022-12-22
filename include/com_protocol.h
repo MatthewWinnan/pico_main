@@ -12,10 +12,13 @@
 #include "pico/util/queue.h"
 #include "/home/matthew/Dev/PICO/pico-sdk/src/host/pico_multicore/include/pico/multicore.h"
 
+// comprotocol needs to be made aware of structures main function would use
+#include "../main.h"
+
 /*
 TODO:
 Fix multicore and pico_w includes not showing up through the linter.
-Implement the int_arg functionality
+Add checks to keep cmd's arrays within max and min array indices.
 */
 
 /*
@@ -37,9 +40,14 @@ Options are fed by prefixing some str/char with -
 If a str is prefixed by - then each char will be a separate option
 
 For example:
-bmp180 -h -> prints the bmp180 help function.
-bmp180 -hs -> Prints the bmp180 help, then executes function bmp180_get_measurement and gets the results.
-bmp180 -h -s -> Prints the bmp180 help, then executes function bmp180_get_measurement and gets the results.
+bmp180 -h -> Executes bmp180 with argument h.
+bmp180 -hs -> Executes bmp180 with argument h and s.
+bmp180 -h -s -> Executes bmp180 with argument h and s.
+
+For argument values this holds :
+<command> -a -r 40 60 -> Executes command with argument a which has an input value of 40. And argument r with input 60.
+<command> -ar 40 60 -> Executes command with argument a which has an input value of 40. And argument r with input 60.
+<command> -a 40 -r 60 -> Executes command with argument a which has an input value of 40. And argument r with input 60.
 
 On default of no option is given the help function will be printed.
 
@@ -61,8 +69,14 @@ help: Provides a basic list of key commands that can be sent.
 #define COM_PROTO_RX_BUFFER_SIZE _u(1024) // Buffer size for stdin
 #define COM_PROTO_ARG_ARRAY_SIZE _u(10) // How many arguments of str can I store at a time
 #define COM_PROTO_COMMAND_SIZE _u(100) //max char size of a given command
+#define COM_PROTO_N_BIN _u(2) // Defines how many 'binaries' we have defined
+#define COM_PROTO_QUEUE_LEN _u(10) // Defines how many entries can be in the queue
+
+// Some error definitions
+#define COM_PROTO_NO_BIN -1
 
 // Main variables
+
 // Declare a command structure
 struct cmd{
     // Holds command
@@ -76,13 +90,26 @@ struct cmd{
     // Holds the integer arguments. The index of each corresponds to the index of the main arg.
     // For example command 24lc16b -a 50 -w 100 would write 100 to address 50
     uint32_t int_arg[COM_PROTO_ARG_ARRAY_SIZE];
+    // Holds current list of argument values, must be equal or smaller than arg_len
+    uint8_t int_arg_len;
+    // Temp array to help the integer value to be converted to integer (weird sentence)
+    uint8_t int_tmp[COM_PROTO_ARG_ARRAY_SIZE];
+    // Hold the n amount of numbers present
+    uint8_t int_tmp_len;
 };
+
+// Declare our executable binary structure
+typedef struct
+{
+    void *func;
+    char *bin_string;
+} bin_executable;
 
 // Declare a queue entry
 typedef struct
 {
     void *func;
-    int32_t data;
+    void *data;
 } queue_entry_t;
 
 // Define our queues to be used
@@ -93,6 +120,12 @@ queue_t call_queue;
 queue_t results_queue;
 
 // Define helpers
+
+// Increments some value within a defined space
+uint16_t safe_increment(uint16_t input, uint16_t max);
+
+// Calculate powers of 10
+uint16_t pow_10(uint8_t exponent);
 
 // Reads characters to buffer
 uint16_t read_stdin(char *buffer);
@@ -113,11 +146,38 @@ void clean_cmd_line(struct cmd* cmd_line);
 
 // Initializer
 void com_protocol_init();
+// Initializes the cmd_line structure
+void init_cmd_line(struct cmd* cmd_line);
+// Initializes the bin_executable structure
+void init_bin_executable(bin_executable *bin_array);
+
+/*
+Here we loop the bin_executable array until we find the bin to execute. 
+Then return with index in range [0,COM_PROTO_N_BIN).
+Else return with COM_PROTO_NO_BIN
+*/
+
+int execute_bin(struct cmd* cmd_line, bin_executable *bin_array);
 
 // Main entry loop
 void com_protocol_entry();
 
-// Define bulk printing functions here
+/*
+Define our 'binary' functions here.
+These act as linux like binary executables.
+Each is associated with a string in bin_executable.
+struct cmd is passed to it to tell it what to do.
+Underneath each will be specific print functions 
+*/
+
+void help_bin(struct cmd* cmd_line);
+void print_help_bin_help();
+
+void bmp180_bin(struct cmd* cmd_line);
+void print_help_bmp180_help();
+void bmp180_error(char argument);
+
+// Define printing functions here
 
 // Printing functions for the BMP180
 

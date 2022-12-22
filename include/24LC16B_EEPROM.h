@@ -8,6 +8,12 @@
 #include "24LC16B_EEPROM_i2c.h"
 
 /*
+TODO:
+Redefine write and read functions to take in some structure of values.
+This will help it work with the standard call methodology of the command line
+*/
+
+/*
 The datasheet for the 24LC16B eeprom can be found at https://pdf1.alldatasheet.com/datasheet-pdf/view/515802/MICROCHIP/24LC16B.html
 This document will be referenced as 24LC16B_DOC throughout inplementation
 Whenever a specific page is referenced I will refer to it as 24LC16B_DOC_x where x is the page number of the datasheet
