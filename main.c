@@ -1,7 +1,6 @@
 #include "main.h"
 //TODO
 //Define better non blocking sleep function
-//Rather than store as file structures we define a struct to be called by serial queries.
 
 void toggle_led(uint8_t* led_state) {
 
