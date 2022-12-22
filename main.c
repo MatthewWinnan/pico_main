@@ -43,12 +43,40 @@ int main() {
     // Holds the current state of the blink    
     uint8_t LED_STATE = 0;
 
+    // Allocate some space to store a queue entry
+    queue_entry_t call_queue_entry;
+
+
     // Main stuff....
     while (true) {
         sleep_ms(2000);
         toggle_led(&LED_STATE);
-        // Take measurements
-        //bmp180_get_measurement(&my_bmp180);
+
+        // Execute anything that might be en the queue
+        // Check if any entry exists in the result queue
+        if (queue_is_empty(&call_queue))
+        {
+            // Empty. For debugging tell me
+            #if MAIN_DEBUG
+            printf("Call queue is empty.\r\n");
+            #endif
+        }
+        else{
+            // Read in the function and input from stdin
+            queue_remove_blocking(&call_queue, &call_queue_entry);
+            printf("Executing bin at location %i. For test bmp180_get_measurement is at %i \r\n",(uint32_t) call_queue_entry.func, (uint32_t) &bmp180_get_measurement);
+            void (*stdout_func)() = (void(*)())(call_queue_entry.func);
+            void *std_out_value = call_queue_entry.data ;
+            printf("70\r\n");
+            // Execute the function
+            struct bmp180_model * my_stdin = (struct bmp180_model *) std_out_value;
+            print_cal_params(my_stdin); 
+            (*stdout_func)((struct bmp180_model *) std_out_value);
+            printf("Adding response");
+            // Add response to the result queue (stdout)
+            queue_entry_t result_queue_entry = {&print_temp_results,&my_bmp180};
+            queue_add_blocking(&results_queue,&result_queue_entry);
+        }
     }
 }
 

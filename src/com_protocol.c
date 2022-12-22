@@ -1,5 +1,14 @@
 #include "../include/com_protocol.h"
 
+// Increments some value within a defined space
+uint16_t safe_increment(uint16_t input, uint16_t max){
+    if ( (input + 1) == max)
+        return input;
+    else
+        return input + 1;
+}
+
+// Redumentary function to calculate 10^exponent. O(n) so eh?
 uint16_t pow_10(uint8_t exponent){
     uint16_t output = 1;
     for (uint8_t i = 0; i < exponent; i++){
@@ -81,11 +90,9 @@ void read_stdin_to_cmd(char *std_in, uint16_t *len, struct cmd* cmd_line){
                 }
                 else if ((uint8_t)std_in[i] == 32){
                     // This is a space thus the command read is done
+                    // We can now go to state 2 to wait for the args
                     cmd_line->cmd_len = i ;
-                }
-                else if ((uint8_t)std_in[i] == 45){
-                    // This is the character -, thus arguments are starting so switch over
-                    state = 1;
+                    state = 2;
                 }
                 else{
                     cmd_line->command[i] = std_in[i];
@@ -101,7 +108,7 @@ void read_stdin_to_cmd(char *std_in, uint16_t *len, struct cmd* cmd_line){
                     // Also ignore terminate char if found
                     // Here we read in the arguments
                     cmd_line->args[cmd_line->arg_len] = std_in[i];
-                    cmd_line->arg_len += 1;
+                    cmd_line->arg_len = (uint8_t) safe_increment((uint16_t) cmd_line->arg_len, (uint16_t) COM_PROTO_ARG_ARRAY_SIZE);
                 }
                 break;
             
@@ -118,7 +125,7 @@ void read_stdin_to_cmd(char *std_in, uint16_t *len, struct cmd* cmd_line){
                     state = 3;
                     // Add to the temp array
                     cmd_line->int_tmp[cmd_line->int_tmp_len] = (uint8_t) std_in[i] - 48;
-                    cmd_line->int_tmp_len += 1;
+                    cmd_line->int_tmp_len = (uint8_t) safe_increment((uint16_t) cmd_line->int_tmp_len, (uint16_t) COM_PROTO_ARG_ARRAY_SIZE);
                     } 
                 }
                 break;
@@ -134,7 +141,7 @@ void read_stdin_to_cmd(char *std_in, uint16_t *len, struct cmd* cmd_line){
                     memset( cmd_line->int_tmp, 0 , cmd_line->int_tmp_len);
                     cmd_line->int_tmp_len = 0;
                     // Increment the int arg amount
-                    cmd_line->int_arg_len += 1;
+                    cmd_line->int_arg_len = (uint8_t) safe_increment((uint16_t) cmd_line->int_arg_len, (uint16_t) COM_PROTO_ARG_ARRAY_SIZE);
                 }
                 else if ((uint8_t)std_in[i] == 32){
                     // This is a space thus the value read is done
@@ -148,12 +155,12 @@ void read_stdin_to_cmd(char *std_in, uint16_t *len, struct cmd* cmd_line){
                     memset( cmd_line->int_tmp, 0 , cmd_line->int_tmp_len);
                     cmd_line->int_tmp_len = 0;
                     // Increment the int arg amount
-                    cmd_line->int_arg_len += 1;
+                    cmd_line->int_arg_len = (uint8_t) safe_increment((uint16_t) cmd_line->int_arg_len, (uint16_t) COM_PROTO_ARG_ARRAY_SIZE);
                 }
                 else if ((cmd_line->int_arg_len < cmd_line->arg_len) && ((uint8_t) std_in[i] >= 48)){
                     // Add to the temp array
                     cmd_line->int_tmp[cmd_line->int_tmp_len] = (uint8_t) std_in[i] - 48;
-                    cmd_line->int_tmp_len += 1;
+                    cmd_line->int_tmp_len = (uint8_t) safe_increment((uint16_t) cmd_line->int_tmp_len, (uint16_t) COM_PROTO_ARG_ARRAY_SIZE);
                 } 
         }
     }
@@ -252,8 +259,8 @@ uint16_t read_stdin(char *buffer){
 // Init function
 void com_protocol_init()
 {
-    queue_init(&call_queue, sizeof(queue_entry_t), 2);
-    queue_init(&results_queue, sizeof(int32_t), 2);
+    queue_init(&call_queue, sizeof(queue_entry_t), COM_PROTO_QUEUE_LEN);
+    queue_init(&results_queue, sizeof(queue_entry_t), COM_PROTO_QUEUE_LEN);
 
     #if COM_PROTO_DEBUG
     printf("Spinning up communication interface.\r\n");
@@ -262,25 +269,80 @@ void com_protocol_init()
     multicore_launch_core1(com_protocol_entry);
 }
 
+// Init the cmd_line structure
+void init_cmd_line(struct cmd* cmd_line){
+    // Setting the defaults for cmd_line
+    memset( cmd_line->command, '\0', sizeof( cmd_line->command ));
+    memset( cmd_line->args, '\0', sizeof( cmd_line->args ));
+    memset( cmd_line->int_arg, 0 , sizeof( cmd_line->int_arg ));
+    memset( cmd_line->int_tmp, 0 , sizeof(cmd_line->int_tmp));
+    cmd_line->arg_len = 0;
+    cmd_line->cmd_len = 0;
+    cmd_line->int_arg_len = 0;
+    cmd_line->int_tmp_len = 0;
+}
+
+// Initializes the bin_executable structure
+void init_bin_executable(bin_executable *bin_array){
+    // Define the first entry
+    char * cmd_buffer_1 = (char *) malloc(4 * sizeof(char)); // Allocate some space in memory for the cmd char
+    char command_1[] = "help";
+    memcpy(cmd_buffer_1, command_1, 4 * sizeof(char)); // Copy the content into memory
+    bin_executable entry_1 = {&help_bin, cmd_buffer_1};
+    bin_array[0] = entry_1;
+
+    // Define the second entry
+    char * cmd_buffer_2 = (char *) malloc(6 * sizeof(char)); // Allocate some space in memory for the cmd char
+    char command_2[] = "bmp180";
+    memcpy(cmd_buffer_2, command_2, 6 * sizeof(char)); // Copy the content into memory
+    bin_executable entry_2 = {&bmp180_bin, cmd_buffer_2};
+    bin_array[1] = entry_2;
+
+    #if COM_PROTO_DEBUG
+    printf("init_bin_executable assigned bin string %s to index 0\r\n",bin_array[0].bin_string);
+    printf("init_bin_executable assigned bin string %s to index 1\r\n",bin_array[1].bin_string);
+    #endif
+}
+
+int execute_bin(struct cmd* cmd_line, bin_executable *bin_array){
+    int result;
+    for (uint8_t i = 0; i<COM_PROTO_N_BIN; i++){
+        // Debug code
+        #if COM_PROTO_DEBUG
+        printf("Comparing string %s with string %s until index %i \r\n",cmd_line->command, bin_array[i].bin_string, cmd_line->cmd_len);
+        #endif
+
+        // Check if strings are equal.
+        result = strncmp(cmd_line->command, bin_array[i].bin_string, cmd_line->cmd_len);
+        if ( result == 0){
+            // Execute the binary
+            void (*func)() = (void(*)())(bin_array[i].func);
+            (*func)(cmd_line);
+            return i;
+        }
+    }
+    return COM_PROTO_NO_BIN;
+}
+
 // Main function entry point
 void com_protocol_entry(){
     // We create some buffer to store the inputs
     char stdin_buffer[COM_PROTO_RX_BUFFER_SIZE] = {0};
     // Initialize the command holder
     struct cmd cmd_line;
-    // Setting the defaults for cmd_line
-    memset( cmd_line.command, '\0', sizeof( cmd_line.command ));
-    memset( cmd_line.args, '\0', sizeof( cmd_line.args ));
-    memset( cmd_line.int_arg, 0 , sizeof( cmd_line.int_arg ));
-    memset( cmd_line.int_tmp, 0 , sizeof(cmd_line.int_tmp));
-    cmd_line.arg_len = 0;
-    cmd_line.cmd_len = 0;
-    cmd_line.int_arg_len = 0;
-    cmd_line.int_tmp_len = 0;
+    init_cmd_line(&cmd_line);
+    // Declare our bin name array
+    bin_executable bin_array[COM_PROTO_N_BIN];
+    // Init bin executables
+    init_bin_executable(bin_array);
     // Store the length of the command
     uint16_t len_str;
     // First clean RX
     clean_rx_buff();    
+    // Result of executables
+    int res;
+    // Allocate some space to store a queue entry
+    queue_entry_t result_queue_entry;
 
     while(1){
         // If any user input read it
@@ -289,26 +351,138 @@ void com_protocol_entry(){
         // Read in the command if len != 0
         if ( len_str != 0 ){
             read_stdin_to_cmd(stdin_buffer,&len_str,&cmd_line);
-        }
-        //For debugging
-        #if COM_PROTO_DEBUG
-        if ( len_str != 0 ){
+
+            // Debugging lines
+            #if COM_PROTO_DEBUG
             printf("Obtained command %s with char length %i.\r\nArguments were %s with length %i \r\n",cmd_line.command,cmd_line.cmd_len,cmd_line.args,cmd_line.arg_len);
             for (uint8_t i = 0; i<cmd_line.int_arg_len; i++)
             {
                 printf("At index %i the value is %i :\r\n",i,cmd_line.int_arg[i]);
             }
+            #endif
+
+            // Execute the binary
+            res = execute_bin(&cmd_line,bin_array);
+
+            // Debugging lines
+            #if COM_PROTO_DEBUG
+            if (res == COM_PROTO_NO_BIN){
+                printf("Command %s does not exist.",cmd_line.command);
+            }
+            #endif
         }
         else{
+            // Debugging lines
+            #if COM_PROTO_DEBUG
             printf("No input was obtained :( \r\n");
+            #endif
         }
-        #endif
 
+        // Check if any entry exists in the result queue
+        if (queue_is_empty(&results_queue))
+        {
+            // Empty. For debugging tell me
+            #if COM_PROTO_DEBUG
+            printf("Result queue is empty.\r\n");
+            #endif
+        }
+        else{
+            printf("Printing the results");
+            // Read in the function and input
+            queue_remove_blocking(&results_queue, &result_queue_entry);
+            void (*stdout_func)() = (void(*)())(result_queue_entry.func);
+            void *std_out_value = result_queue_entry.data ;
+            // Execute the function
+            // We always assume stdout will be of some form of this.
+            (*stdout_func)(std_out_value);
+        }
+        
         // Clean stdin after reading
         clean_stdin(stdin_buffer, &len_str);
         // Clean cmd_line after reading
         clean_cmd_line(&cmd_line);
     }
+}
+
+/*
+Define out 'binary' functions here.
+These act as linux like binary executables.
+Each is associated with a string in bin_executable.
+struct cmd is passed to it to tell it what to do.
+*/
+
+void help_bin(struct cmd* cmd_line){
+    // We check if the command received any args
+    switch (cmd_line->arg_len){
+        case 0:
+            // No args received print generic help
+            print_help_bin_help();
+            break;
+        default:
+            // Print generic help
+            print_help_bin_help();
+            break;
+    }
+}
+
+void print_help_bin_help(){
+    // USB communications based implementation
+    #if USE_USB
+    printf("Usage for help:\r\n-h: Displays this help message.\r\nDefault: Displays this message and entire list of defined binaries.\r\n");
+    printf("List of binaries:\r\n1) help\r\n2) bmp180\r\n");
+    #endif
+}
+
+void bmp180_bin(struct cmd* cmd_line){
+    // For the rationale behind my weird empty switch case label. Consult the discussion at 
+    // https://stackoverflow.com/questions/18496282/why-do-i-get-a-label-can-only-be-part-of-a-statement-and-a-declaration-is-not-a
+    // We check if the command received any args
+    switch (cmd_line->arg_len){
+        case 0:
+            // No args received print generic help
+            print_help_bmp180_help();
+            break;
+        default: ; // This empty label is so we can use declerations
+            // We cycle through the arguments and add each to the call queue.
+            for (uint16_t i = 0; i<cmd_line->arg_len; i++){
+                switch ((uint8_t) cmd_line->args[i]){
+                    case 104:
+                        // The h case. We also break out of the for loop
+                        print_help_bmp180_help();
+                        i = cmd_line->arg_len;
+                        break;
+                    case 109: ; // This empty label is so we can use declerations
+                    // The m case
+                    // Go ahead and declare some entry
+                    queue_entry_t entry = {&bmp180_get_measurement,&my_bmp180};
+                    queue_add_blocking(&call_queue, &entry);
+                    break; // This should still correctly break out of the switch
+                    default:
+                        // Invalid input
+                        bmp180_error(cmd_line->args[i]);
+                        // Also exit the for loop
+                        i = cmd_line->arg_len;
+                        break;
+                }
+            }
+            break; // This should still correctly break out of the switch
+    }
+}
+
+void print_help_bmp180_help(){
+    // USB communications based implementation
+    #if USE_USB
+    printf("Usage for bmp180:\r\n-h: Displays this help message.\r\n-m: Performs full temperature and pressure sampling.\r\nDefault: Displays this help message.\r\n");
+    #endif
+}
+
+void bmp180_error(char argument){
+    // USB communications based implementation
+    #if USE_USB
+    printf("Recieved invalid character %c \r\n. The usage is defined as: \r\n\r\n",argument);
+    #endif
+    // Print generic helper
+    print_help_bmp180_help();
 }
 
 // BMP_180 Print Functions Defines

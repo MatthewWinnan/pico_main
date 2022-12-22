@@ -12,6 +12,9 @@
 #include "pico/util/queue.h"
 #include "/home/matthew/Dev/PICO/pico-sdk/src/host/pico_multicore/include/pico/multicore.h"
 
+// comprotocol needs to be made aware of structures main function would use
+#include "../main.h"
+
 /*
 TODO:
 Fix multicore and pico_w includes not showing up through the linter.
@@ -66,8 +69,14 @@ help: Provides a basic list of key commands that can be sent.
 #define COM_PROTO_RX_BUFFER_SIZE _u(1024) // Buffer size for stdin
 #define COM_PROTO_ARG_ARRAY_SIZE _u(10) // How many arguments of str can I store at a time
 #define COM_PROTO_COMMAND_SIZE _u(100) //max char size of a given command
+#define COM_PROTO_N_BIN _u(2) // Defines how many 'binaries' we have defined
+#define COM_PROTO_QUEUE_LEN _u(10) // Defines how many entries can be in the queue
+
+// Some error definitions
+#define COM_PROTO_NO_BIN -1
 
 // Main variables
+
 // Declare a command structure
 struct cmd{
     // Holds command
@@ -89,11 +98,18 @@ struct cmd{
     uint8_t int_tmp_len;
 };
 
+// Declare our executable binary structure
+typedef struct
+{
+    void *func;
+    char *bin_string;
+} bin_executable;
+
 // Declare a queue entry
 typedef struct
 {
     void *func;
-    int32_t data;
+    void *data;
 } queue_entry_t;
 
 // Define our queues to be used
@@ -104,6 +120,9 @@ queue_t call_queue;
 queue_t results_queue;
 
 // Define helpers
+
+// Increments some value within a defined space
+uint16_t safe_increment(uint16_t input, uint16_t max);
 
 // Calculate powers of 10
 uint16_t pow_10(uint8_t exponent);
@@ -127,11 +146,38 @@ void clean_cmd_line(struct cmd* cmd_line);
 
 // Initializer
 void com_protocol_init();
+// Initializes the cmd_line structure
+void init_cmd_line(struct cmd* cmd_line);
+// Initializes the bin_executable structure
+void init_bin_executable(bin_executable *bin_array);
+
+/*
+Here we loop the bin_executable array until we find the bin to execute. 
+Then return with index in range [0,COM_PROTO_N_BIN).
+Else return with COM_PROTO_NO_BIN
+*/
+
+int execute_bin(struct cmd* cmd_line, bin_executable *bin_array);
 
 // Main entry loop
 void com_protocol_entry();
 
-// Define bulk printing functions here
+/*
+Define our 'binary' functions here.
+These act as linux like binary executables.
+Each is associated with a string in bin_executable.
+struct cmd is passed to it to tell it what to do.
+Underneath each will be specific print functions 
+*/
+
+void help_bin(struct cmd* cmd_line);
+void print_help_bin_help();
+
+void bmp180_bin(struct cmd* cmd_line);
+void print_help_bmp180_help();
+void bmp180_error(char argument);
+
+// Define printing functions here
 
 // Printing functions for the BMP180
 
