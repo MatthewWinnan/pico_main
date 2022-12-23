@@ -49,7 +49,7 @@ For argument values this holds :
 <command> -ar 40 60 -> Executes command with argument a which has an input value of 40. And argument r with input 60.
 <command> -a 40 -r 60 -> Executes command with argument a which has an input value of 40. And argument r with input 60.
 
-On default of no option is given the help function will be printed.
+On default if no option is given the help function will be printed.
 
 NB as a word of caution, specific trumps general. The examples are the general case one would find and describes 
 in general most commands' functionality.
