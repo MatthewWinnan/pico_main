@@ -50,6 +50,12 @@ Currently this driver is configured to work with the pico SDK.
 struct lcb16b_eeprom {
     uint8_t chipID; //Stores the chipID for reference
     uint16_t pointer; //Points to what register we are currently at
+
+    uint8_t *src; // Stores data to be written
+    uint8_t src_len; // Stores the length of src to be written
+
+    uint8_t *dst; // Stores data to be read
+    uint8_t dst_len; // Stores the length of dst to be read
 };
 
 //Helper functions
@@ -73,6 +79,10 @@ void lcb16b_eeprom_point_write(struct lcb16b_eeprom* my_eeprom, const uint8_t *s
 void lcb16b_eeprom_random_read(struct lcb16b_eeprom* my_eeprom, uint8_t *dst, uint8_t len);
 //Performs a read to the address pointed to by register
 void lcb16b_eeprom_point_read(struct lcb16b_eeprom* my_eeprom, uint8_t *dst, uint8_t len, uint16_t reg);
+
+// Wrappers to be executed by control protocol
+
+//
 
 
 #endif

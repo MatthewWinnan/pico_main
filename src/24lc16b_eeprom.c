@@ -49,6 +49,8 @@ void lcb16b_eeprom_init(struct lcb16b_eeprom* my_eeprom){
     //Save the chip ID and init starting conditions
     my_eeprom->chipID = read_buff[0];
     my_eeprom->pointer = LCB16B_START_REG;
+    my_eeprom->src_len = 0;
+    my_eeprom->dst_len = 0;
 
     #if LCB16B_DEBUG
     print_eeprom_chip_ID(my_eeprom);
@@ -114,7 +116,7 @@ void lcb16b_eeprom_point_write(struct lcb16b_eeprom* my_eeprom, const uint8_t *s
 
     // Sanity check to see if register is in the desired range
     // Implementation choice is made to move it to the first valid number, aka start register
-    if ( reg >= LCB16B_START_REG && reg <= LCB16B_STOP_REG){
+    if ( reg < LCB16B_START_REG || reg > LCB16B_STOP_REG){
         #if LCB16B_DEBUG
         printf("Address %i not in allowed range [%u, %u]. Setting it to first valid index %u.\r\n", reg, LCB16B_START_REG, LCB16B_STOP_REG, LCB16B_START_REG);
         #endif
@@ -123,7 +125,7 @@ void lcb16b_eeprom_point_write(struct lcb16b_eeprom* my_eeprom, const uint8_t *s
     }
 
     // Assing the pointer to register
-    my_eeprom->pointer;
+    my_eeprom->pointer = reg;
 
     //We can now use random write fot the remaining functionality
     lcb16b_eeprom_random_write(my_eeprom, src, len);
@@ -178,7 +180,7 @@ void lcb16b_eeprom_point_read(struct lcb16b_eeprom* my_eeprom, uint8_t *dst, uin
 
     // Sanity check to see if register is in the desired range
     // Implementation choice is made to move it to the first valid number, aka start register
-    if ( reg >= LCB16B_START_REG && reg <= LCB16B_STOP_REG){
+    if ( reg < LCB16B_START_REG || reg > LCB16B_STOP_REG){
         #if LCB16B_DEBUG
         printf("Address %i not in allowed range [%u, %u]. Setting it to first valid index %u.\r\n", reg, LCB16B_START_REG, LCB16B_STOP_REG, LCB16B_START_REG);
         #endif
