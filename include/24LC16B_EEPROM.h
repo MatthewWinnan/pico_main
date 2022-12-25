@@ -6,6 +6,7 @@
 #include <math.h>
 #include <string.h>
 #include "24LC16B_EEPROM_i2c.h"
+#include "pico_rtc.h"
 
 /*
 TODO:
@@ -38,8 +39,9 @@ Currently this driver is configured to work with the pico SDK.
 #define LCB16B_PAGE_WRITE_TIME_SAFETY _u(4) // Defines the scalar to scale LCB16B_PAGE_WRITE_TIME to form a safety margin
 #define LCB16B_PAGE_WRITE_TIME _u(5) // From 24LC16B_DOC_8 there is a max page write time of 5ms, make it wait 4X for safety
 
-#define LCB16B_INIT 0 //Flag to use to determine if new chipID should be written. If set to 0 will only see if chipID can be read
-#define LCB16B_DEBUG 1 //Flag to determine if USB debut statements should be printed
+#define LCB16B_INIT 0 //Flag to use to determine if new chipID should be written. If set to 0 will only see if chipID can be read.
+#define LCB16B_DEBUG 1 //Flag to determine if USB debug statements should be printed.
+#define LCB16B_INFO 1 //Flag to determine if USB info statements should be printed.
 
 // Objects used to decribe the chip
 
@@ -71,18 +73,21 @@ void lcb16b_eeprom_init(struct lcb16b_eeprom* my_eeprom);
 //Writing functions
 
 //Performs a random write operation
-void lcb16b_eeprom_random_write(struct lcb16b_eeprom* my_eeprom, const uint8_t *src, uint8_t len);
+void lcb16b_eeprom_random_write(struct lcb16b_eeprom* my_eeprom);
 //Performs a write to the address pointed to by register
-void lcb16b_eeprom_point_write(struct lcb16b_eeprom* my_eeprom, const uint8_t *src, uint8_t len, uint16_t reg);
+void lcb16b_eeprom_point_write(struct lcb16b_eeprom* my_eeprom, uint16_t reg);
 
 //Performs a random read operation
-void lcb16b_eeprom_random_read(struct lcb16b_eeprom* my_eeprom, uint8_t *dst, uint8_t len);
+void lcb16b_eeprom_random_read(struct lcb16b_eeprom* my_eeprom);
 //Performs a read to the address pointed to by register
-void lcb16b_eeprom_point_read(struct lcb16b_eeprom* my_eeprom, uint8_t *dst, uint8_t len, uint16_t reg);
+void lcb16b_eeprom_point_read(struct lcb16b_eeprom* my_eeprom, uint16_t reg);
 
-// Wrappers to be executed by control protocol
+// Wrappers to be executed by control protocols
 
-//
+// Creates space in memory and assigns the src value to an 8-bit buffer
+void lcb16b_set_src(struct lcb16b_eeprom* my_eeprom, uint32_t src_value, bool time_stamp);
 
+// Reads in some value to the 8-bit dst buffer in my_eeprom.
+void lcb16b_set_dst(struct lcb16b_eeprom* my_eeprom, bool time_stamp);
 
 #endif

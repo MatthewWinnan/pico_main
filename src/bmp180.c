@@ -32,7 +32,7 @@ void bmp180_get_cal(struct bmp180_calib_param* params,struct bmp180_model* my_ch
     my_chip->cal_params = params;
 
     //Print  out the callibrated data 
-    #if BMP_180_DEBUG_MODE
+    #if BMP_180_INFO_MODE
     print_cal_params(my_chip);
     #endif
 }
@@ -54,7 +54,7 @@ void bmp180_init(struct bmp180_model* my_chip, struct bmp180_calib_param* my_par
     // At BMP180_DOC_19 it states the device needs 10 ms to start up. Only needs to be more
     sleep_ms(1000); //it may say 10ms but that might be purely buffers. In practice needs 1s to boot.
 
-    #if BMP_180_DEBUG_MODE
+    #if BMP_180_INFO_MODE
     printf("Starting BMP180 setup\r\n");
     #endif
 
@@ -65,7 +65,7 @@ void bmp180_init(struct bmp180_model* my_chip, struct bmp180_calib_param* my_par
 
     if (chipID[0] != BMP_180_CHIP_ID){
         while (true){
-            #if BMP_180_DEBUG_MODE
+            #if BMP_180_INFO_MODE
             printf("BMP180 was not configured correctly :(.\r\n");
             printf("Obtained values. chipID = %d, expected = %d \r\n",chipID[0],BMP_180_CHIP_ID);
             #endif
@@ -73,7 +73,7 @@ void bmp180_init(struct bmp180_model* my_chip, struct bmp180_calib_param* my_par
         }   
     }
     else {
-        #if BMP_180_DEBUG_MODE
+        #if BMP_180_INFO_MODE
         printf("BMP180 was configured correctly :)\r\n");
         printf("Obtained values. chipID = %d, expected = %d \r\n",chipID[0],BMP_180_CHIP_ID);
         #endif
@@ -171,16 +171,30 @@ void bmp180_get_pressure(struct bmp180_model* my_chip){
 
 void bmp180_get_altitude(struct bmp180_model* my_chip)
 {
+    // We need to first get measurements
+    bmp180_get_measurement(my_chip);
     //The following altitude calculations are defined in BMP180_DOC_16
     float p_ratio = (float) ( (float) my_chip->measurement_params->p/BMP_180_SEA_PRESSURE);
     float inter_term = (float) (1- powf(p_ratio,(float) (1/5.255)));
     // Assign the altitude
     my_chip->measurement_params->altitude = (float) ( (float) 44330 *inter_term);
+
+    // Debug lines
+    #if BMP_180_DEBUG_MODE 
+    print_altitude_results(my_chip);
+    #endif
 }
 
 void bmp180_get_sea_pressure(struct bmp180_model* my_chip){
+    // We need to first get measurements
+    bmp180_get_measurement(my_chip);
     //The following calculations are defined in BMP180_DOC_17
     my_chip->measurement_params->p_relative = (float) ((float) my_chip->measurement_params->p/(powf((float) (1 - ((float) BMP_180_CENTURION_HEIGHT/(float) 44330)),5.255)));
+
+    // Debug lines
+    #if BMP_180_DEBUG_MODE 
+    print_relative_pressure_results(my_chip);
+    #endif
 }
 
 void bmp180_get_measurement(struct bmp180_model* my_chip){
@@ -199,16 +213,10 @@ void bmp180_get_measurement(struct bmp180_model* my_chip){
     my_chip->measurement_params->p = (long ) (my_chip->measurement_params->p_sum/BMP_180_SS);
     my_chip->measurement_params->T = (long ) (my_chip->measurement_params->T_sum/BMP_180_SS);
 
-    //Calculate additional derived measurements
-    bmp180_get_altitude(my_chip);
-    bmp180_get_sea_pressure(my_chip);
-
     //Print the results
     #if BMP_180_DEBUG_MODE 
     print_temp_results(my_chip);
     print_press_results(my_chip);
-    print_altitude_results(my_chip);
-    print_relative_pressure_results(my_chip);
     #endif
 }
 

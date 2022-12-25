@@ -11,6 +11,7 @@
 #include "24LC16B_EEPROM.h"
 #include "pico/util/queue.h"
 #include "/home/matthew/Dev/PICO/pico-sdk/src/host/pico_multicore/include/pico/multicore.h"
+#include "pico_rtc.h"
 
 // comprotocol needs to be made aware of structures main function would use
 #include "../main.h"
@@ -64,13 +65,19 @@ help: Provides a basic list of key commands that can be sent.
 */
 
 #define USE_USB 1 // Will tinyUSB be used as the main communications?
-#define COM_PROTO_DEBUG 1 // Will USB debug be printed out?
 #define COM_PROTO_RX_WAIT _u(1000000) //Wait for COM_PROTO_RX_WAIT us for some buffer input
 #define COM_PROTO_RX_BUFFER_SIZE _u(1024) // Buffer size for stdin
 #define COM_PROTO_ARG_ARRAY_SIZE _u(10) // How many arguments of str can I store at a time
 #define COM_PROTO_COMMAND_SIZE _u(100) //max char size of a given command
 #define COM_PROTO_N_BIN _u(2) // Defines how many 'binaries' we have defined
 #define COM_PROTO_QUEUE_LEN _u(10) // Defines how many entries can be in the queue
+
+// Some basic lazy debug log levels
+#define COM_PROTO_DEBUG 0 // Will USB debug be printed out? If allowed prints each operational step.
+#define COM_PROTO_INFO 1 // Will USB INFO be printed out? If allowed prints generic setup info
+
+// For some user friendliness
+#define COM_PROTO_USER_FEEDBACK_SERIAL 1 // enable this to print stdin input to the serial terminal
 
 // Some error definitions
 #define COM_PROTO_NO_BIN -1
@@ -176,6 +183,11 @@ void print_help_bin_help();
 void bmp180_bin(struct cmd* cmd_line);
 void print_help_bmp180_help();
 void bmp180_error(char argument);
+
+/*
+We need some output selector
+*/
+int stdout_selector(void *func_pointer);
 
 // Define printing functions here
 

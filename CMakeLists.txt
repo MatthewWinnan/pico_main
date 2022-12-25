@@ -25,6 +25,7 @@ add_executable(${PROJECT_NAME}
     src/bmp180_i2c.c
     src/24LC16B_EEPROM_i2c.c
     src/i2c_config.c
+    src/pico_rtc.c
 )
 
 # Create map/bin/hex/uf2 files
@@ -37,11 +38,13 @@ pico_add_extra_outputs(${PROJECT_NAME})
 # Link to pico_cyw43_arch_none (for the cyw43 module)
 # Link to pico_multicore 
 # Link to hardware_i2c (for i2c communications)
+# Link to hardware_rtc for the RTC functionality
 target_link_libraries(${PROJECT_NAME} 
     pico_stdlib
     pico_cyw43_arch_none
     pico_multicore
     hardware_i2c
+    hardware_rtc
 )
 
 # Enable usb output, disable uart output

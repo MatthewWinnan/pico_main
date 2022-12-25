@@ -28,7 +28,7 @@ void clean_rx_buff(){
         if ( result == PICO_ERROR_TIMEOUT) {
             // We are done cleaning
             bflag = false;
-            #if COM_PROTO_DEBUG
+            #if COM_PROTO_INFO
             printf("RX buffer now clean :D.\r\n");
             #endif
         }
@@ -201,6 +201,9 @@ uint16_t read_stdin_usb(char *buffer){
                     case 3:
                         // This is the text end character. Triggered by Ctrl+C
                         // Just escape
+                        #if COM_PROTO_USER_FEEDBACK_SERIAL
+                        printf("\r\n");
+                        #endif
                         return index;
                         
                     case 8:
@@ -209,6 +212,7 @@ uint16_t read_stdin_usb(char *buffer){
                         // Only move back if no underflow will occur
                         if ( index > 0){
                         index -= 1;
+                        buffer[index] = (char)0; // Clear this character
                         }
                         break;
                     
@@ -221,6 +225,9 @@ uint16_t read_stdin_usb(char *buffer){
                     case 24:
                         // This is a CAN, here we assume the user has canceled their input. Return 0
                         // This is done by Ctrl+X
+                        #if COM_PROTO_USER_FEEDBACK_SERIAL
+                        printf("\r\n");
+                        #endif
                         return 0;
 
                     default:
@@ -236,15 +243,30 @@ uint16_t read_stdin_usb(char *buffer){
                         }
                         break;
                 }
+                // Print updated stdin feedback
+                #if COM_PROTO_USER_FEEDBACK_SERIAL
+                printf("\r[pico_w]:%s ",buffer);
+                #endif
             }
             else {
                 // Index is now overflowing return
+                #if COM_PROTO_USER_FEEDBACK_SERIAL
+                printf("\r\n");
+                #endif
                 buffer[index - 1] = (char) 0;
                 return index;
             }
         }
     }
+    #if COM_PROTO_USER_FEEDBACK_SERIAL
     // Normal return 
+    if (index > 0){
+        printf("\r\n");
+    }
+    else {
+       printf("\r[pico_w]:"); 
+    }
+    #endif
     buffer[index] = (char) 0;
     return index;
 }
@@ -262,7 +284,7 @@ void com_protocol_init()
     queue_init(&call_queue, sizeof(queue_entry_t), COM_PROTO_QUEUE_LEN);
     queue_init(&results_queue, sizeof(queue_entry_t), COM_PROTO_QUEUE_LEN);
 
-    #if COM_PROTO_DEBUG
+    #if COM_PROTO_INFO
     printf("Spinning up communication interface.\r\n");
     #endif
 
@@ -285,9 +307,9 @@ void init_cmd_line(struct cmd* cmd_line){
 // Initializes the bin_executable structure
 void init_bin_executable(bin_executable *bin_array){
     // Define the first entry
-    char * cmd_buffer_1 = (char *) malloc(4 * sizeof(char)); // Allocate some space in memory for the cmd char
+    char * cmd_buffer_1 = (char *) malloc(4 * sizeof(uint8_t)); // Allocate some space in memory for the cmd char
     char command_1[] = "help";
-    memcpy(cmd_buffer_1, command_1, 4 * sizeof(char)); // Copy the content into memory
+    memcpy(cmd_buffer_1, command_1, 4 * sizeof(uint8_t)); // Copy the content into memory
     bin_executable entry_1 = {&help_bin, cmd_buffer_1};
     bin_array[0] = entry_1;
 
@@ -298,7 +320,7 @@ void init_bin_executable(bin_executable *bin_array){
     bin_executable entry_2 = {&bmp180_bin, cmd_buffer_2};
     bin_array[1] = entry_2;
 
-    #if COM_PROTO_DEBUG
+    #if COM_PROTO_INFO
     printf("init_bin_executable assigned bin string %s to index 0\r\n",bin_array[0].bin_string);
     printf("init_bin_executable assigned bin string %s to index 1\r\n",bin_array[1].bin_string);
     #endif
@@ -367,7 +389,7 @@ void com_protocol_entry(){
             // Debugging lines
             #if COM_PROTO_DEBUG
             if (res == COM_PROTO_NO_BIN){
-                printf("Command %s does not exist.",cmd_line.command);
+                printf("Command %s does not exist.\r\n",cmd_line.command);
             }
             #endif
         }
@@ -387,7 +409,6 @@ void com_protocol_entry(){
             #endif
         }
         else{
-            printf("Printing the results");
             // Read in the function and input
             queue_remove_blocking(&results_queue, &result_queue_entry);
             void (*stdout_func)() = (void(*)())(result_queue_entry.func);
@@ -483,6 +504,27 @@ void bmp180_error(char argument){
     #endif
     // Print generic helper
     print_help_bmp180_help();
+}
+
+
+// Defines STDOUT selection and enques it to the result queue. This should be called by main. Makes sense to me to keep it here
+int stdout_selector(void *func_pointer){
+    // Can't use a switch statement since pointer is not a constant value....
+    if ((uint32_t) func_pointer == (uint32_t) &bmp180_get_measurement){
+        // Queue the temp results
+        queue_entry_t result_queue_entry_temp = {&print_temp_results,&my_bmp180};
+        queue_add_blocking(&results_queue,&result_queue_entry_temp);
+        // Queue the pressure results
+        queue_entry_t result_queue_entry_press = {&print_press_results,&my_bmp180};
+        queue_add_blocking(&results_queue,&result_queue_entry_press);
+        return 0;
+    }
+    else {
+        #if COM_PROTO_DEBUG
+        printf("Invalid function entered to stdout_selector.");
+        #endif
+        return -1;
+    }
 }
 
 // BMP_180 Print Functions Defines

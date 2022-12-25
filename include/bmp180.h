@@ -23,9 +23,12 @@ Currently this driver is configured to work with the pico SDK.
 #define BMP_180_CHIP_ID_ADDR _u(0xD0) //Given at BMP180_DOC_18
 #define BMP_180_CHIP_ID _u(0x55) //Given at BMP180_DOC_18
 #define BMP_180_ADDR _u(0xEE >> 1) //Given at BMP180_DOC_20. Bit shift to the left to remove LSB and make a 7-bit number
-#define BMP_180_DEBUG_MODE 1 //Defines if debug print statements are enabled. 0 for False 1>= for True
 #define BMP_180_SEA_PRESSURE _u(101800) //Defines the relative pressure in Pa at sea level for the OR tambo station obtained from https://meteologix.com/za/observations/south-africa/pressure-qnh/20221204-0900z.html
 #define BMP_180_CENTURION_HEIGHT _u(1453) //Height above sea level for Centurion. Obtained from https://elevation.maplogs.com/poi/centurion_south_africa.478211.html
+
+// Lazy debug modes
+#define BMP_180_DEBUG_MODE 0 //Defines if debug print statements are enabled. 0 for False 1>= for True. This will give feedback on each operational step.
+#define BMP_180_INFO_MODE 1 //Defines if INFO print statements are enabled. 0 for False 1>= for True. Info is for init feedback.
 
 //BMP_180 Global Register Values
 //Given at BMP180_DOC_18

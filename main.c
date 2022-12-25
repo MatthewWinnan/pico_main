@@ -11,7 +11,7 @@ void toggle_led(uint8_t* led_state) {
 
 }
 
-
+// Main init function to initialize all periphirals on program start
 void program_init(){
     // Initialize all standard stdio types linked with binary.
     stdio_init_all();
@@ -21,6 +21,7 @@ void program_init(){
         printf("WiFi init failed");
         return;
     }
+    printf("CYW43 WiFi init success");
     //Init I2C
     global_i2c_init();
 
@@ -32,6 +33,9 @@ void program_init(){
 
     //Init the com protocol
     com_protocol_init();
+
+    //Init the RTC
+    init_pico_rtc(&my_datetime);
 }
 
 int main() {
@@ -63,18 +67,12 @@ int main() {
         else{
             // Read in the function and input from stdin
             queue_remove_blocking(&call_queue, &call_queue_entry);
-            printf("Executing bin at location %i. For test bmp180_get_measurement is at %i \r\n",(uint32_t) call_queue_entry.func, (uint32_t) &bmp180_get_measurement);
-            void (*stdout_func)() = (void(*)())(call_queue_entry.func);
-            void *std_out_value = call_queue_entry.data ;
-            printf("70\r\n");
+            void (*stdin_func)() = (void(*)())(call_queue_entry.func);
+            void *std_in_value = call_queue_entry.data ;
             // Execute the function
-            struct bmp180_model * my_stdin = (struct bmp180_model *) std_out_value;
-            print_cal_params(my_stdin); 
-            (*stdout_func)((struct bmp180_model *) std_out_value);
-            printf("Adding response");
+            (*stdin_func)(std_in_value);
             // Add response to the result queue (stdout)
-            queue_entry_t result_queue_entry = {&print_temp_results,&my_bmp180};
-            queue_add_blocking(&results_queue,&result_queue_entry);
+            int res = stdout_selector(call_queue_entry.func);
         }
     }
 }
