@@ -1,6 +1,9 @@
 #include "../include/com_protocol.h"
 #include "com_protocol.h"
 
+// TODO find some generic way to initialize cmd by using struct declared in main
+// TODO find out why I get the weird char malloc definitions. exe help)��@(kl
+
 // Increments some value within a defined space
 uint16_t safe_increment(uint16_t input, uint16_t max){
     if ( (input + 1) == max)
@@ -494,7 +497,7 @@ void bmp180_bin(struct cmd* cmd_line){
                         break;
                     case 99: ;
                         // The c case.
-                        print_cal_params(cmd_line->bmp_180);
+                        print_cal_params_bmp180(cmd_line->bmp_180);
                         break;
                     case 104:
                         // The h case. We also break out of the for loop
@@ -520,6 +523,7 @@ void bmp180_bin(struct cmd* cmd_line){
                     case 118: ;
                         // The v case so just set verbose on
                         cmd_line->bmp_180->v = 1;
+                        break;
                     default:
                         // Invalid input
                         bmp180_error(cmd_line->args[i]);
@@ -544,7 +548,7 @@ void print_help_bmp180_help(){
     // USB communications based implementation
     #if USE_USB
     printf("Usage for bmp180:\r\n-a: Performs altitude estimation.\r\n");
-    printf("-c: Displays the bmp180's calibration parameters.");
+    printf("-c: Displays the bmp180's calibration parameters.\r\n");
     printf("-h: Displays this help message.\r\n");
     printf("-m: Performs full temperature and pressure sampling. Takes in additional integer arguments if one wishes to repeat the process.\r\n");
     printf("-s: Performs relative sea pressure estimation.\r\n");
@@ -556,7 +560,7 @@ void print_help_bmp180_help(){
 void bmp180_error(char argument){
     // USB communications based implementation
     #if USE_USB
-    printf("Recieved invalid character %c \r\n. The usage is defined as: \r\n\r\n",argument);
+    printf("Recieved invalid character %c with value %u.\r\nThe usage is defined as: \r\n\r\n",argument,argument);
     #endif
     // Print generic helper
     print_help_bmp180_help();
@@ -577,6 +581,7 @@ void bmp180_inter_m(queue_entry_t *entry_queue, uint8_t *entry_len, struct cmd* 
         if (*entry_len < COM_PROTO_QUEUE_LEN){
         entry_queue[loc].func = &bmp180_get_measurement;
         entry_queue[loc].data = cmd_line->bmp_180;
+        *entry_len += 1;
         }
     }
 }
@@ -586,23 +591,23 @@ int stdout_selector(void *func_pointer){
     // Can't use a switch statement since pointer is not a constant value....
     if ((uint32_t) func_pointer == (uint32_t) &bmp180_get_measurement){
         // Queue the temp results
-        queue_entry_t result_queue_entry_temp = {&print_temp_results,&my_bmp180};
+        queue_entry_t result_queue_entry_temp = {&print_temp_results_bmp180,&my_bmp180};
         queue_add_blocking(&results_queue,&result_queue_entry_temp);
         // Queue the pressure results
-        queue_entry_t result_queue_entry_press = {&print_press_results,&my_bmp180};
+        queue_entry_t result_queue_entry_press = {&print_press_results_bmp180,&my_bmp180};
         queue_add_blocking(&results_queue,&result_queue_entry_press);
         return 0;
     }
     else if ((uint32_t) func_pointer == (uint32_t) &bmp180_get_altitude)
     {
        // Queue the alt results
-        queue_entry_t result_queue_entry_altitude = {&print_altitude_results,&my_bmp180};
+        queue_entry_t result_queue_entry_altitude = {&print_altitude_results_bmp180,&my_bmp180};
         queue_add_blocking(&results_queue,&result_queue_entry_altitude); 
     }
     else if ((uint32_t) func_pointer == (uint32_t) &bmp180_get_sea_pressure)
     {
        // Queue the alt results
-        queue_entry_t result_queue_entry_sea_pressure = {&print_relative_pressure_results,&my_bmp180};
+        queue_entry_t result_queue_entry_sea_pressure = {&print_relative_pressure_results_bmp180,&my_bmp180};
         queue_add_blocking(&results_queue,&result_queue_entry_sea_pressure); 
     }
     else {
@@ -616,7 +621,7 @@ int stdout_selector(void *func_pointer){
 // BMP_180 Print Functions Defines
 
 // Print functions to be called by Serial queries.
-void print_temp_results(struct bmp180_model* my_chip)
+void print_temp_results_bmp180(struct bmp180_model* my_chip)
 {
     #if USE_USB
     printf("\r==== Temperature Measurement Results ==== \r\n");
@@ -632,7 +637,7 @@ void print_temp_results(struct bmp180_model* my_chip)
     #endif
 }
 
-void print_press_results(struct bmp180_model* my_chip){
+void print_press_results_bmp180(struct bmp180_model* my_chip){
     #if USE_USB
     printf("\r==== Pressure Measurement Results ==== \r\n");
     // Only print these if verbose
@@ -664,27 +669,27 @@ void print_press_results(struct bmp180_model* my_chip){
     #endif
 }
 
-void print_altitude_results(struct bmp180_model* my_chip){
+void print_altitude_results_bmp180(struct bmp180_model* my_chip){
     #if USE_USB
     printf("\rCurrently the device is at %f (m) \r\n",my_chip->measurement_params->altitude);
     #endif
 }
 
-void print_relative_pressure_results(struct bmp180_model* my_chip){
+void print_relative_pressure_results_bmp180(struct bmp180_model* my_chip){
     #if USE_USB
     printf("\rRelative pressure at sea level for device = %f Pa \r\n",my_chip->measurement_params->p_relative);
     #endif
 }
 
-void print_chip_ID(struct bmp180_model* my_chip){
+void print_chip_ID_bmp180(struct bmp180_model* my_chip){
     #if USE_USB
     printf("\rFor BMP180 ChipID = %u \r\n",my_chip->chipID);
     #endif
 }
 
-void print_cal_params(struct bmp180_model* my_chip){
+void print_cal_params_bmp180(struct bmp180_model* my_chip){
     #if USE_USB
-    printf("\r==== Obtained Calibration Parameters ====");
+    printf("\r==== BMP180 Obtained Calibration Parameters ====\r\n");
     printf("Obtained data for A1: %i \r\n",my_chip->cal_params->AC1);
     printf("Obtained data for A2: %i \r\n",my_chip->cal_params->AC2);
     printf("Obtained data for A3: %i \r\n",my_chip->cal_params->AC3);
@@ -704,5 +709,30 @@ void print_cal_params(struct bmp180_model* my_chip){
 void print_eeprom_chip_ID(struct lcb16b_eeprom* my_eeprom){
     #if USE_USB
     printf("\rFor 24LC16B eeprom ChipID = %u \r\n",my_eeprom->chipID);
+    #endif
+}
+
+// BME280 print functions defines 
+void print_cal_params_bme280(struct bme280_model* my_chip){
+    #if USE_USB
+    printf("\r==== BME280 Obtained Calibration Parameters ====\r\n");
+    printf("Obtained data for T1: %u \r\n",my_chip->cal_params->dig_T1);
+    printf("Obtained data for T2: %i \r\n",my_chip->cal_params->dig_T2);
+    printf("Obtained data for T2: %i \r\n",my_chip->cal_params->dig_T3);
+    printf("Obtained data for P1: %u \r\n",my_chip->cal_params->dig_P1);
+    printf("Obtained data for P2: %i \r\n",my_chip->cal_params->dig_P2);
+    printf("Obtained data for P3: %i \r\n",my_chip->cal_params->dig_P3);
+    printf("Obtained data for P4: %i \r\n",my_chip->cal_params->dig_P4);
+    printf("Obtained data for P5: %i \r\n",my_chip->cal_params->dig_P5);
+    printf("Obtained data for P6: %i \r\n",my_chip->cal_params->dig_P6);
+    printf("Obtained data for P7: %i \r\n",my_chip->cal_params->dig_P7);
+    printf("Obtained data for P8: %i \r\n",my_chip->cal_params->dig_P8);
+    printf("Obtained data for P9: %i \r\n",my_chip->cal_params->dig_P9);
+    printf("Obtained data for H1: %u Unsigned char: %c \r\n",my_chip->cal_params->dig_H1);
+    printf("Obtained data for H2: %i \r\n",my_chip->cal_params->dig_H2);
+    printf("Obtained data for H3: %u Unsigned char: %c \r\n",my_chip->cal_params->dig_H3);
+    printf("Obtained data for H4: %i \r\n",my_chip->cal_params->dig_H4);
+    printf("Obtained data for H5: %i \r\n",my_chip->cal_params->dig_H5);
+    printf("Obtained data for H6: %i Signed char: %c \r\n",my_chip->cal_params->dig_H6);
     #endif
 }

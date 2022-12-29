@@ -26,6 +26,8 @@ add_executable(${PROJECT_NAME}
     src/24LC16B_EEPROM_i2c.c
     src/i2c_config.c
     src/pico_rtc.c
+    src/bme280.c
+    src/bme280_i2c.c
 )
 
 # Create map/bin/hex/uf2 files

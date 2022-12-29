@@ -8,6 +8,7 @@
 #include "pico/cyw43_arch.h"
 #include "boards/pico_w.h"
 #include "bmp180.h"
+#include "bme280.h"
 #include "24LC16B_EEPROM.h"
 #include "pico/util/queue.h"
 #include "/home/matthew/Dev/PICO/pico-sdk/src/host/pico_multicore/include/pico/multicore.h"
@@ -199,15 +200,19 @@ int stdout_selector(void *func_pointer);
 
 // Printing functions for the BMP180
 
-void print_temp_results(struct bmp180_model* my_chip);
-void print_press_results(struct bmp180_model* my_chip);
-void print_altitude_results(struct bmp180_model* my_chip);
-void print_relative_pressure_results(struct bmp180_model* my_chip);
-void print_chip_ID(struct bmp180_model* my_chip);
-void print_cal_params(struct bmp180_model* my_chip);
+void print_temp_results_bmp180(struct bmp180_model* my_chip);
+void print_press_results_bmp180(struct bmp180_model* my_chip);
+void print_altitude_results_bmp180(struct bmp180_model* my_chip);
+void print_relative_pressure_results_bmp180(struct bmp180_model* my_chip);
+void print_chip_ID_bmp180(struct bmp180_model* my_chip);
+void print_cal_params_bmp180(struct bmp180_model* my_chip);
 
 // Printing functions for the 24LC16B
 
 void print_eeprom_chip_ID(struct lcb16b_eeprom* my_eeprom);
+
+// Printing functions for the BME280
+
+void print_cal_params_bme280(struct bme280_model* my_chip);
 
 #endif

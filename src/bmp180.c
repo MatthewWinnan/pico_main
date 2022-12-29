@@ -33,7 +33,7 @@ void bmp180_get_cal(struct bmp180_calib_param* params,struct bmp180_model* my_ch
 
     //Print  out the callibrated data 
     #if BMP_180_INFO_MODE
-    print_cal_params(my_chip);
+    print_cal_params_bmp180(my_chip);
     #endif
 }
 

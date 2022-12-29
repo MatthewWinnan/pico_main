@@ -26,16 +26,19 @@ void program_init(){
     global_i2c_init();
 
     //Init BMP180
-    bmp180_init(&my_bmp180, &calib_params, &my_bmp180_measurements);
+    bmp180_init(&my_bmp180, &my_bmp180_calib_params, &my_bmp180_measurements);
+
+    //Init BME280
+    bme280_init(&my_bme280, &my_bme280_calib_params);
 
     //Init the eeprom
     lcb16b_eeprom_init(&my_eeprom);
 
-    //Init the com protocol
-    com_protocol_init();
-
     //Init the RTC
     init_pico_rtc(&my_datetime);
+
+    //Init the com protocol
+    com_protocol_init();
 }
 
 int main() {
