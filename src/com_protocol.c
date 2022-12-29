@@ -303,6 +303,10 @@ void init_cmd_line(struct cmd* cmd_line){
     cmd_line->cmd_len = 0;
     cmd_line->int_arg_len = 0;
     cmd_line->int_tmp_len = 0;
+
+    // TODO find some nicer way to initialize the sensor state variables
+    cmd_line->bmp_180 = &my_bmp180;
+    cmd_line->eeprom = &my_eeprom;
 }
 
 // Initializes the bin_executable structure
@@ -459,10 +463,20 @@ void bmp180_bin(struct cmd* cmd_line){
     // For the rationale behind my weird empty switch case label. Consult the discussion at 
     // https://stackoverflow.com/questions/18496282/why-do-i-get-a-label-can-only-be-part-of-a-statement-and-a-declaration-is-not-a
     // We check if the command received any args
+
+    // Start by setting verbose back to 0
+    cmd_line->bmp_180->v = 0;
+    // Initialize some space for undefined amount of queue entries
+    // We do this so we can set the unified state of the bmp180 struct if needed
+    queue_entry_t entry_array[COM_PROTO_QUEUE_LEN]; // Can only be max this
+    uint8_t entry_array_index = 0;
+    // Now we need an arror flag incase bogus inputs were made
+    bool valid_case = true;
     switch (cmd_line->arg_len){
         case 0:
             // No args received print generic help
             print_help_bmp180_help();
+            valid_case = false;
             break;
         default: ; // This empty label is so we can use declerations
             // We cycle through the arguments and add each to the call queue.
@@ -470,37 +484,59 @@ void bmp180_bin(struct cmd* cmd_line){
                 switch ((uint8_t) cmd_line->args[i]){
                     case 97: ;
                         // The a case.
-                        queue_entry_t entry_a = {&bmp180_get_altitude,&my_bmp180};
-                        queue_add_blocking(&call_queue, &entry_a);
+                        if (entry_array_index < COM_PROTO_QUEUE_LEN){
+                        // Add it to our 'to enter entries'
+                        entry_array[entry_array_index].func = &bmp180_get_altitude;
+                        entry_array[entry_array_index].data = cmd_line->bmp_180;
+                        // Step index up
+                        entry_array_index+=1;
+                        }
                         break;
                     case 99: ;
                         // The c case.
-                        print_cal_params(&my_bmp180);
+                        print_cal_params(cmd_line->bmp_180);
                         break;
                     case 104:
                         // The h case. We also break out of the for loop
+                        valid_case = false; // Whenever -h is used we only print no execute.
                         print_help_bmp180_help();
                         i = cmd_line->arg_len;
                         break;
                     case 109: ; // This empty label is so we can use declerations
                         // The m case
-                        bmp180_inter_m(&my_bmp180,cmd_line,i);
+                        bmp180_inter_m(entry_array, &entry_array_index, cmd_line,i);
 
                         break; // This should still correctly break out of the switch
                     case 115: ;
                         // The s case
-                        queue_entry_t entry_s = {&bmp180_get_sea_pressure,&my_bmp180};
-                        queue_add_blocking(&call_queue, &entry_s);
+                        if (entry_array_index < COM_PROTO_QUEUE_LEN){
+                        // Add it to our 'to enter entries'
+                        entry_array[entry_array_index].func = &bmp180_get_sea_pressure;
+                        entry_array[entry_array_index].data = cmd_line->bmp_180;
+                        // Step index up
+                        entry_array_index+=1;
+                        }
                         break;
+                    case 118: ;
+                        // The v case so just set verbose on
+                        cmd_line->bmp_180->v = 1;
                     default:
                         // Invalid input
                         bmp180_error(cmd_line->args[i]);
+                        valid_case = false;
                         // Also exit the for loop
                         i = cmd_line->arg_len;
                         break;
                 }
             }
             break; // This should still correctly break out of the switch
+    }
+    if (valid_case){
+        // If no errors occurred we now add everything to the main queue :)
+        for (uint8_t loc=0; loc<entry_array_index; loc++){
+        // Add to the queue
+        queue_add_blocking(&call_queue, &entry_array[loc]);
+    }
     }
 }
 
@@ -512,6 +548,7 @@ void print_help_bmp180_help(){
     printf("-h: Displays this help message.\r\n");
     printf("-m: Performs full temperature and pressure sampling. Takes in additional integer arguments if one wishes to repeat the process.\r\n");
     printf("-s: Performs relative sea pressure estimation.\r\n");
+    printf("-v: Prints results in verbose mode. Default this option is turned off.\r\n");
     printf("Default: Displays this help message.\r\n");
     #endif
 }
@@ -525,23 +562,22 @@ void bmp180_error(char argument){
     print_help_bmp180_help();
 }
 
-void bmp180_inter_m(struct bmp180_model *my_chip, struct cmd* cmd_line, uint8_t index)
+void bmp180_inter_m(queue_entry_t *entry_queue, uint8_t *entry_len, struct cmd* cmd_line, uint8_t index)
 {
     if (cmd_line->int_arg_len>index){
         // We have an entry for this case
-        my_chip->m = cmd_line->int_arg[index];
+        cmd_line->bmp_180->m = cmd_line->int_arg[index];
     }
     else {
         // Set to 1
-        my_chip->m = 1;
+        cmd_line->bmp_180->m = 1;
     }
-    // Go ahead and declare some entry
-    queue_entry_t entries_m[my_chip->m];
-    for (uint8_t loc=0; loc<my_chip->m; loc++){
-        entries_m[loc].func = &bmp180_get_measurement;
-        entries_m[loc].data = my_chip;
-        // Add to the queue
-        queue_add_blocking(&call_queue, &entries_m[loc]);
+    // Go ahead and add entries
+    for (uint8_t loc=*entry_len; loc<cmd_line->bmp_180->m; loc++){
+        if (*entry_len < COM_PROTO_QUEUE_LEN){
+        entry_queue[loc].func = &bmp180_get_measurement;
+        entry_queue[loc].data = cmd_line->bmp_180;
+        }
     }
 }
 
@@ -584,11 +620,14 @@ void print_temp_results(struct bmp180_model* my_chip)
 {
     #if USE_USB
     printf("\r==== Temperature Measurement Results ==== \r\n");
+    // Only print these if verbose
+    if (my_chip->v == 1){
     printf("Obtained UT = %i \r\n",my_chip->measurement_params->ut);
     printf("Intermittent step X1 = %i \r\n",my_chip->measurement_params->X1_tmp);
     printf("Intermittent step X2 = %i \r\n",my_chip->measurement_params->X2_tmp);
     printf("Obtained B5 = %i \r\n",my_chip->measurement_params->B5);
     printf("Overall sample sum for %u samples = %i \r\n",BMP_180_SS,my_chip->measurement_params->T_sum);
+    }
     printf("Obtained TMP in 0.1C = %d \r\n",my_chip->measurement_params->T);
     #endif
 }
@@ -596,6 +635,8 @@ void print_temp_results(struct bmp180_model* my_chip)
 void print_press_results(struct bmp180_model* my_chip){
     #if USE_USB
     printf("\r==== Pressure Measurement Results ==== \r\n");
+    // Only print these if verbose
+    if (my_chip->v == 1){
     printf("Obtained UP = %i \r\n",my_chip->measurement_params->up);
 
     printf("Obtained B6 = %i \r\n",my_chip->measurement_params->B6);
@@ -618,6 +659,7 @@ void print_press_results(struct bmp180_model* my_chip){
     printf("Intermittent step X2_3 = %i \r\n",my_chip->measurement_params->X2_p_3);
 
     printf("Overall sample sum for %u samples = %i \r\n",BMP_180_SS,my_chip->measurement_params->p_sum);
+    }
     printf("Obtained Pressure in 1Pa = %d \r\n",my_chip->measurement_params->p);
     #endif
 }

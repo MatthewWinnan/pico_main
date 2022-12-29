@@ -84,6 +84,7 @@ void bmp180_init(struct bmp180_model* my_chip, struct bmp180_calib_param* my_par
     my_chip->measurement_params = measures;
     #if BMP_180_COM_PROTO_ENABLE
     my_chip->m = 1; // Assigns the value for the m argument
+    my_chip->v = 0;
     #endif
     //We read in the calibration parameters
     bmp180_get_cal(my_params,my_chip);
@@ -170,6 +171,13 @@ void bmp180_get_pressure(struct bmp180_model* my_chip){
     my_chip->measurement_params->X1_p_4 = (long)(((float) my_chip->measurement_params->X1_p_3 * 3038))/(powf((float)2, (float) 16));
     my_chip->measurement_params->X2_p_3 = (long)(((float) -7357 * my_chip->measurement_params->p_inter))/(powf((float)2, (float) 16));
     my_chip->measurement_params->p_sum += my_chip->measurement_params->p_inter + (long)(((float)(my_chip->measurement_params->X1_p_4 + my_chip->measurement_params->X2_p_3 + 3791))/powf((float)2, (float) 4));
+}
+
+void bmp180_get_temp_pressure(struct bmp180_model* my_chip)
+{
+    // So this is basic wrapper 
+    bmp180_get_temp(my_chip);
+    bmp180_get_pressure(my_chip);
 }
 
 void bmp180_get_altitude(struct bmp180_model* my_chip)

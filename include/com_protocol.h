@@ -103,6 +103,10 @@ struct cmd{
     uint8_t int_tmp[COM_PROTO_ARG_ARRAY_SIZE];
     // Hold the n amount of numbers present
     uint8_t int_tmp_len;
+
+    // Here we declare the states of models that can be called. They are simple pointers
+    struct bmp180_model* bmp_180;
+    struct lcb16b_eeprom* eeprom;
 };
 
 // Declare our executable binary structure
@@ -183,7 +187,7 @@ void print_help_bin_help();
 void bmp180_bin(struct cmd* cmd_line);
 void print_help_bmp180_help();
 void bmp180_error(char argument);
-void bmp180_inter_m(struct bmp180_model* my_chip, struct cmd* cmd_line, uint8_t index);
+void bmp180_inter_m(queue_entry_t *entry_queue, uint8_t *entry_len, struct cmd* cmd_line, uint8_t index);
 
 
 /*

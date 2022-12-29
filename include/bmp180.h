@@ -157,6 +157,7 @@ struct bmp180_model {
     // This is only for the com protocol. Feel free to leave this out :)
     #if BMP_180_COM_PROTO_ENABLE
     uint8_t m; // Assigns the value for the m argument
+    uint8_t v; // Assigns the value for the verbose argument
     #endif
 };
 
@@ -175,6 +176,9 @@ void bmp180_get_temp(struct bmp180_model* my_chip);
 
 void bmp180_get_up(struct bmp180_model* my_chip);
 void bmp180_get_pressure(struct bmp180_model* my_chip);
+// Because in general get_pressure is always preluded by get_temperature when get_measurement is saved it does not call get_temp internally
+// Unfortunately if I want to add a function to com_proto to only get temp and or pressure I need to add this function wrapper
+void bmp180_get_temp_pressure(struct bmp180_model* my_chip);
 
 //Main wrapper to obtain measurements and average over :)
 void bmp180_get_measurement(struct bmp180_model* my_chip);
