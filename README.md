@@ -18,6 +18,9 @@ PICO-SDK documents: https://raspberrypi.github.io/pico-sdk-doxygen/index.html
 The following drivers have been made:
 1) BMP-180: Data-Sheet -> https://cdn-shop.adafruit.com/datasheets/BST-BMP180-DS000-09.pdf
 2) 24LC16B: Data-Sheet -> https://pdf1.alldatasheet.com/datasheet-pdf/view/515802/MICROCHIP/24LC16B.html
+3) BME-280: Data-Sheet -> https://cdn-shop.adafruit.com/datasheets/BST-BME280_DS001-10.pdf  
+   Breakout Board -> https://www.mouser.com/datasheet/2/737/adafruit-bme280-humidity-barometric-pressure-tempe-740823.pdf
+            
 
 It is important to install the cmake and c/c++ config extentions for vscode. 
 A good help guide video can be found at https://www.youtube.com/watch?v=B5rQSoOmR5w
