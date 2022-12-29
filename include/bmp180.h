@@ -30,6 +30,9 @@ Currently this driver is configured to work with the pico SDK.
 #define BMP_180_DEBUG_MODE 0 //Defines if debug print statements are enabled. 0 for False 1>= for True. This will give feedback on each operational step.
 #define BMP_180_INFO_MODE 1 //Defines if INFO print statements are enabled. 0 for False 1>= for True. Info is for init feedback.
 
+// Com protocol specific flags
+#define BMP_180_COM_PROTO_ENABLE 1 // Allows decleration of additional com protocol only variables.
+
 //BMP_180 Global Register Values
 //Given at BMP180_DOC_18
 //Define the registers to be used for calibration parameters and amount of these
@@ -151,6 +154,10 @@ struct bmp180_model {
     struct bmp180_calib_param* cal_params;
     struct bmp180_measurements* measurement_params;
     uint8_t chipID;
+    // This is only for the com protocol. Feel free to leave this out :)
+    #if BMP_180_COM_PROTO_ENABLE
+    uint8_t m; // Assigns the value for the m argument
+    #endif
 };
 
 //Mappings for the OSS mode of Pressure to variable input 

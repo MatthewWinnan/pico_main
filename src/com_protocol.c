@@ -1,4 +1,5 @@
 #include "../include/com_protocol.h"
+#include "com_protocol.h"
 
 // Increments some value within a defined space
 uint16_t safe_increment(uint16_t input, uint16_t max){
@@ -307,15 +308,15 @@ void init_cmd_line(struct cmd* cmd_line){
 // Initializes the bin_executable structure
 void init_bin_executable(bin_executable *bin_array){
     // Define the first entry
-    char * cmd_buffer_1 = (char *) malloc(4 * sizeof(uint8_t)); // Allocate some space in memory for the cmd char
-    char command_1[] = "help";
-    memcpy(cmd_buffer_1, command_1, 4 * sizeof(uint8_t)); // Copy the content into memory
+    char * cmd_buffer_1 = (char *) malloc(4 * sizeof(char)); // Allocate some space in memory for the cmd char
+    char command_1[4] = "help";
+    memcpy(cmd_buffer_1, command_1, 4 * sizeof(char)); // Copy the content into memory
     bin_executable entry_1 = {&help_bin, cmd_buffer_1};
     bin_array[0] = entry_1;
 
     // Define the second entry
     char * cmd_buffer_2 = (char *) malloc(6 * sizeof(char)); // Allocate some space in memory for the cmd char
-    char command_2[] = "bmp180";
+    char command_2[6] = "bmp180";
     memcpy(cmd_buffer_2, command_2, 6 * sizeof(char)); // Copy the content into memory
     bin_executable entry_2 = {&bmp180_bin, cmd_buffer_2};
     bin_array[1] = entry_2;
@@ -467,17 +468,30 @@ void bmp180_bin(struct cmd* cmd_line){
             // We cycle through the arguments and add each to the call queue.
             for (uint16_t i = 0; i<cmd_line->arg_len; i++){
                 switch ((uint8_t) cmd_line->args[i]){
+                    case 97: ;
+                        // The a case.
+                        queue_entry_t entry_a = {&bmp180_get_altitude,&my_bmp180};
+                        queue_add_blocking(&call_queue, &entry_a);
+                        break;
+                    case 99: ;
+                        // The c case.
+                        print_cal_params(&my_bmp180);
+                        break;
                     case 104:
                         // The h case. We also break out of the for loop
                         print_help_bmp180_help();
                         i = cmd_line->arg_len;
                         break;
                     case 109: ; // This empty label is so we can use declerations
-                    // The m case
-                    // Go ahead and declare some entry
-                    queue_entry_t entry = {&bmp180_get_measurement,&my_bmp180};
-                    queue_add_blocking(&call_queue, &entry);
-                    break; // This should still correctly break out of the switch
+                        // The m case
+                        bmp180_inter_m(&my_bmp180,cmd_line,i);
+
+                        break; // This should still correctly break out of the switch
+                    case 115: ;
+                        // The s case
+                        queue_entry_t entry_s = {&bmp180_get_sea_pressure,&my_bmp180};
+                        queue_add_blocking(&call_queue, &entry_s);
+                        break;
                     default:
                         // Invalid input
                         bmp180_error(cmd_line->args[i]);
@@ -493,7 +507,12 @@ void bmp180_bin(struct cmd* cmd_line){
 void print_help_bmp180_help(){
     // USB communications based implementation
     #if USE_USB
-    printf("Usage for bmp180:\r\n-h: Displays this help message.\r\n-m: Performs full temperature and pressure sampling.\r\nDefault: Displays this help message.\r\n");
+    printf("Usage for bmp180:\r\n-a: Performs altitude estimation.\r\n");
+    printf("-c: Displays the bmp180's calibration parameters.");
+    printf("-h: Displays this help message.\r\n");
+    printf("-m: Performs full temperature and pressure sampling. Takes in additional integer arguments if one wishes to repeat the process.\r\n");
+    printf("-s: Performs relative sea pressure estimation.\r\n");
+    printf("Default: Displays this help message.\r\n");
     #endif
 }
 
@@ -506,6 +525,25 @@ void bmp180_error(char argument){
     print_help_bmp180_help();
 }
 
+void bmp180_inter_m(struct bmp180_model *my_chip, struct cmd* cmd_line, uint8_t index)
+{
+    if (cmd_line->int_arg_len>index){
+        // We have an entry for this case
+        my_chip->m = cmd_line->int_arg[index];
+    }
+    else {
+        // Set to 1
+        my_chip->m = 1;
+    }
+    // Go ahead and declare some entry
+    queue_entry_t entries_m[my_chip->m];
+    for (uint8_t loc=0; loc<my_chip->m; loc++){
+        entries_m[loc].func = &bmp180_get_measurement;
+        entries_m[loc].data = my_chip;
+        // Add to the queue
+        queue_add_blocking(&call_queue, &entries_m[loc]);
+    }
+}
 
 // Defines STDOUT selection and enques it to the result queue. This should be called by main. Makes sense to me to keep it here
 int stdout_selector(void *func_pointer){
@@ -518,6 +556,18 @@ int stdout_selector(void *func_pointer){
         queue_entry_t result_queue_entry_press = {&print_press_results,&my_bmp180};
         queue_add_blocking(&results_queue,&result_queue_entry_press);
         return 0;
+    }
+    else if ((uint32_t) func_pointer == (uint32_t) &bmp180_get_altitude)
+    {
+       // Queue the alt results
+        queue_entry_t result_queue_entry_altitude = {&print_altitude_results,&my_bmp180};
+        queue_add_blocking(&results_queue,&result_queue_entry_altitude); 
+    }
+    else if ((uint32_t) func_pointer == (uint32_t) &bmp180_get_sea_pressure)
+    {
+       // Queue the alt results
+        queue_entry_t result_queue_entry_sea_pressure = {&print_relative_pressure_results,&my_bmp180};
+        queue_add_blocking(&results_queue,&result_queue_entry_sea_pressure); 
     }
     else {
         #if COM_PROTO_DEBUG
@@ -533,7 +583,7 @@ int stdout_selector(void *func_pointer){
 void print_temp_results(struct bmp180_model* my_chip)
 {
     #if USE_USB
-    printf("==== Temperature Measurement Results ==== \r\n");
+    printf("\r==== Temperature Measurement Results ==== \r\n");
     printf("Obtained UT = %i \r\n",my_chip->measurement_params->ut);
     printf("Intermittent step X1 = %i \r\n",my_chip->measurement_params->X1_tmp);
     printf("Intermittent step X2 = %i \r\n",my_chip->measurement_params->X2_tmp);
@@ -545,7 +595,7 @@ void print_temp_results(struct bmp180_model* my_chip)
 
 void print_press_results(struct bmp180_model* my_chip){
     #if USE_USB
-    printf("==== Pressure Measurement Results ==== \r\n");
+    printf("\r==== Pressure Measurement Results ==== \r\n");
     printf("Obtained UP = %i \r\n",my_chip->measurement_params->up);
 
     printf("Obtained B6 = %i \r\n",my_chip->measurement_params->B6);
@@ -574,25 +624,25 @@ void print_press_results(struct bmp180_model* my_chip){
 
 void print_altitude_results(struct bmp180_model* my_chip){
     #if USE_USB
-    printf("Currently the device is at %f (m) \r\n",my_chip->measurement_params->altitude);
+    printf("\rCurrently the device is at %f (m) \r\n",my_chip->measurement_params->altitude);
     #endif
 }
 
 void print_relative_pressure_results(struct bmp180_model* my_chip){
     #if USE_USB
-    printf("Relative pressure at sea level for device = %f Pa \r\n",my_chip->measurement_params->p_relative);
+    printf("\rRelative pressure at sea level for device = %f Pa \r\n",my_chip->measurement_params->p_relative);
     #endif
 }
 
 void print_chip_ID(struct bmp180_model* my_chip){
     #if USE_USB
-    printf("For BMP180 ChipID = %u \r\n",my_chip->chipID);
+    printf("\rFor BMP180 ChipID = %u \r\n",my_chip->chipID);
     #endif
 }
 
 void print_cal_params(struct bmp180_model* my_chip){
     #if USE_USB
-    printf("==== Obtained Calibration Parameters ====");
+    printf("\r==== Obtained Calibration Parameters ====");
     printf("Obtained data for A1: %i \r\n",my_chip->cal_params->AC1);
     printf("Obtained data for A2: %i \r\n",my_chip->cal_params->AC2);
     printf("Obtained data for A3: %i \r\n",my_chip->cal_params->AC3);
@@ -611,6 +661,6 @@ void print_cal_params(struct bmp180_model* my_chip){
 
 void print_eeprom_chip_ID(struct lcb16b_eeprom* my_eeprom){
     #if USE_USB
-    printf("For 24LC16B eeprom ChipID = %u \r\n",my_eeprom->chipID);
+    printf("\rFor 24LC16B eeprom ChipID = %u \r\n",my_eeprom->chipID);
     #endif
 }

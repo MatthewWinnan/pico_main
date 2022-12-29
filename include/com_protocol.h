@@ -70,7 +70,7 @@ help: Provides a basic list of key commands that can be sent.
 #define COM_PROTO_ARG_ARRAY_SIZE _u(10) // How many arguments of str can I store at a time
 #define COM_PROTO_COMMAND_SIZE _u(100) //max char size of a given command
 #define COM_PROTO_N_BIN _u(2) // Defines how many 'binaries' we have defined
-#define COM_PROTO_QUEUE_LEN _u(10) // Defines how many entries can be in the queue
+#define COM_PROTO_QUEUE_LEN _u(15) // Defines how many entries can be in the queue
 
 // Some basic lazy debug log levels
 #define COM_PROTO_DEBUG 0 // Will USB debug be printed out? If allowed prints each operational step.
@@ -183,6 +183,8 @@ void print_help_bin_help();
 void bmp180_bin(struct cmd* cmd_line);
 void print_help_bmp180_help();
 void bmp180_error(char argument);
+void bmp180_inter_m(struct bmp180_model* my_chip, struct cmd* cmd_line, uint8_t index);
+
 
 /*
 We need some output selector

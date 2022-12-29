@@ -44,7 +44,7 @@ void bmp180_init(struct bmp180_model* my_chip, struct bmp180_calib_param* my_par
     pressure_oss[1] = BMP_180_SET_PRESS_OSS_1;
     pressure_oss[2] = BMP_180_SET_PRESS_OSS_2;
     pressure_oss[3] = BMP_180_SET_PRESS_OSS_3;
-    //Mappings for out wait time in pressure mode
+    //Mappings for our wait time in pressure mode
     pressure_time[0] = BMP_180_PRES_OSS_0;
     pressure_time[1] = BMP_180_PRES_OSS_1;
     pressure_time[2] = BMP_180_PRES_OSS_2;
@@ -82,6 +82,9 @@ void bmp180_init(struct bmp180_model* my_chip, struct bmp180_calib_param* my_par
     my_chip->chipID = chipID[0];
     //Assign the input measurement structure to the chip structure
     my_chip->measurement_params = measures;
+    #if BMP_180_COM_PROTO_ENABLE
+    my_chip->m = 1; // Assigns the value for the m argument
+    #endif
     //We read in the calibration parameters
     bmp180_get_cal(my_params,my_chip);
 }
