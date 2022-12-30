@@ -29,6 +29,7 @@ struct bmp180_measurements my_bmp180_measurements; //used as a variable to store
 //In order to use the bme280 library initialize the object instance of each of the following
 struct bme280_model my_bme280; //used as variable to pass to save the current BME280 state.
 struct bme280_calib_param my_bme280_calib_params; //used as variable to pass to save calibration params. Used further in code.
+struct bme280_settings my_bme280_settings; //Used to store the settings to be used be getters and setters
 
 //In order to use the 24LC16B eeprom driver initialize the needed object
 struct lcb16b_eeprom my_eeprom; //Used as structure to store ID and pointer

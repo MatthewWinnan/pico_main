@@ -29,7 +29,7 @@ void program_init(){
     bmp180_init(&my_bmp180, &my_bmp180_calib_params, &my_bmp180_measurements);
 
     //Init BME280
-    bme280_init(&my_bme280, &my_bme280_calib_params);
+    bme280_init(&my_bme280, &my_bme280_calib_params, &my_bme280_settings);
 
     //Init the eeprom
     lcb16b_eeprom_init(&my_eeprom);
