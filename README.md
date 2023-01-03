@@ -38,6 +38,7 @@ If one is only interested in using the drivers keep the following in mind:
 2) Add any board specific I2C initialization functions and values to i2c_config.c and i2c_config.h.
 3) main.h shows the structure that need to be declared in order to start using the drivers, further they always need to be initialized.
 4) The drivers are a package deal. As such in order to use a driver you need to include its .c, .h and all i2c specific files to your project.
+5) Deactivate any communication protocol flags such as BMP_180_COM_PROTO_ENABLE in their respective header files. This will disable these features on compile time.
 
 # COM_PROTOCOL
 This is designed to simulate the feel of working on a linux terminal. 
