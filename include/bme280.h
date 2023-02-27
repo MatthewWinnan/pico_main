@@ -272,7 +272,7 @@ struct bme280_measurements {
     int32_t T;
     uint32_t P;
     uint32_t H; 
-}
+};
 
 // Structure to store the current state of the chip
 struct bme280_model {
