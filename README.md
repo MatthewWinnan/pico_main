@@ -26,10 +26,10 @@ It is important to install the cmake and c/c++ config extentions for vscode.
 A good help guide video can be found at https://www.youtube.com/watch?v=B5rQSoOmR5w
 
 For PICO-SDK usage in vscode it is important to have the following defined in your .bashrc config file:
-1) export PICO_SDK_PATH=/home/matthew/Dev/PICO/pico-sdk
-2) export PICO_EXAMPLES_PATH=/home/matthew/Dev/PICO/pico-examples
-3) export PICO_EXTRAS_PATH=/home/matthew/Dev/PICO/pico-extras
-4) export PICO_PLAYGROUND_PATH=/home/matthew/Dev/PICO/pico-playground
+1) export PICO_SDK_PATH=/PATH/TO/pico-sdk
+2) export PICO_EXAMPLES_PATH=/PATH/TO/pico-examples
+3) export PICO_EXTRAS_PATH=/PATH/TO/pico-extras
+4) export PICO_PLAYGROUND_PATH=/PATH/TO/pico-playground
 
 If you did that then you should be able to use the onboard Cmake file.
 
