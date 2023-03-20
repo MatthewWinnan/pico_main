@@ -1,5 +1,12 @@
 #include "../include/bme280.h"
-#include "../include/com_protocol.h"
+
+// Initialize all external variables
+uint8_t bme280_osrs_h_mode_array[6] = {0,0,0,0,0,0};
+uint8_t bme280_osrs_p_mode_array[6] = {0,0,0,0,0,0};
+uint8_t bme280_osrs_t_mode_array[6] = {0,0,0,0,0,0};
+uint8_t bme280_t_sb_mode_array[8] = {0,0,0,0,0,0,0,0};
+uint8_t bme280_filter_mode_array[5] = {0,0,0,0,0};
+uint32_t bme280_t_sb_timing_array[8] = {0,0,0,0,0,0,0,0};
 
 void read_bme280_chip_id(struct bme280_model *my_chip){
     uint8_t chipID[1];
@@ -89,6 +96,7 @@ void read_bme280_callibration_params(struct bme280_model *my_chip, struct bme280
 }
 
 void bme280_init(struct bme280_model *my_chip, struct bme280_calib_param *params, struct bme280_settings *settings){
+
     // Wait for startup
     sleep_ms(BME_280_STARTUP_T);
 

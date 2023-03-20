@@ -7,6 +7,7 @@
 #include <string.h>
 #include "24LC16B_EEPROM_i2c.h"
 #include "pico_rtc.h"
+#include "com_protocol.h"
 
 /*
 TODO:

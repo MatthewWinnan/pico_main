@@ -1,5 +1,4 @@
 #include "../include/24LC16B_EEPROM.h"
-#include "../include/com_protocol.h"
 // #include "com_protocol.c"
 
 uint8_t return_device_address(uint16_t register_address){

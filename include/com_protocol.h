@@ -11,7 +11,7 @@
 #include "bme280.h"
 #include "24LC16B_EEPROM.h"
 #include "pico/util/queue.h"
-#include "/home/matthew/Dev/PICO/pico-sdk/src/host/pico_multicore/include/pico/multicore.h"
+#include "pico/multicore.h"
 #include "pico_rtc.h"
 
 // comprotocol needs to be made aware of structures main function would use
@@ -127,9 +127,9 @@ typedef struct
 // Define our queues to be used
 
 // com_protocol will add the needed entry to be used by main
-queue_t call_queue;
+extern queue_t call_queue;
 // Here results are added by main to be printed by com_protocol
-queue_t results_queue;
+extern queue_t results_queue;
 
 // Define helpers
 

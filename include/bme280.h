@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "bme280_i2c.h"
+#include "com_protocol.h"
 
 /*
 Data sheet can be found at https://cdn-shop.adafruit.com/datasheets/BST-BME280_DS001-10.pdf
@@ -78,7 +79,7 @@ Values are given at BME280_DOC_26 for osrs_h modes
 #define BME_280_OSRS_H_5 _u(0b100)
 #define BME_280_OSRS_H_6 _u(0b101)
 // Lookup array
-uint8_t bme280_osrs_h_mode_array[6];
+extern uint8_t bme280_osrs_h_mode_array[6];
 
 /*
 Values are given at BME280_DOC_27 for osrs_p modes
@@ -92,7 +93,7 @@ Values are given at BME280_DOC_27 for osrs_p modes
 #define BME_280_OSRS_P_5 _u(0b100)
 #define BME_280_OSRS_P_6 _u(0b101)
 // Lookup array
-uint8_t bme280_osrs_p_mode_array[6];
+extern uint8_t bme280_osrs_p_mode_array[6];
 
 /*
 Values are given at BME280_DOC_27 for osrs_t modes
@@ -106,7 +107,7 @@ Values are given at BME280_DOC_27 for osrs_t modes
 #define BME_280_OSRS_T_5 _u(0b100)
 #define BME_280_OSRS_T_6 _u(0b101)
 // Lookup array
-uint8_t bme280_osrs_t_mode_array[6];
+extern uint8_t bme280_osrs_t_mode_array[6];
 
 /*
 Values are given at BME280_DOC_28 for t_sb settings.
@@ -124,7 +125,7 @@ The impact it has on the timing of consecutive measurements is shown in the timi
 #define BME_280_T_SB_7 _u(0b110)
 #define BME_280_T_SB_8 _u(0b111)
 // Lookup array
-uint8_t bme280_t_sb_mode_array[8];
+extern uint8_t bme280_t_sb_mode_array[8];
 
 /*
 Values are given at BME280_DOC_28 for filter settings.
@@ -138,7 +139,7 @@ For the full explenation of this look at BME280_DOC_15 - BME280_DOC_16
 #define BME_280_FILTER_4 _u(0b011)
 #define BME_280_FILTER_5 _u(0b100)
 // Lookup array
-uint8_t bme280_filter_mode_array[5];
+extern uint8_t bme280_filter_mode_array[5];
 
 /*
 This enables the SPI interface 3 wire when set to 1. I have included it for completeness sake, since the example uses I2C it is not needed.
@@ -157,16 +158,16 @@ Standby timing values can be viewed at BME280_DOC_28
 Timing is done in us to avoid float values.
 Selection is done based on BME_280_T_SB_MODE
 */
-#define BME_280_T_SB_TIMING_1 _u(500)
-#define BME_280_T_SB_TIMING_2 _u(62500)
-#define BME_280_T_SB_TIMING_3 _u(125000)
-#define BME_280_T_SB_TIMING_4 _u(250000)
-#define BME_280_T_SB_TIMING_5 _u(500000)
-#define BME_280_T_SB_TIMING_6 _u(1000000)
-#define BME_280_T_SB_TIMING_7 _u(10000)
-#define BME_280_T_SB_TIMING_8 _u(20000)
+#define BME_280_T_SB_TIMING_1 500
+#define BME_280_T_SB_TIMING_2 62500
+#define BME_280_T_SB_TIMING_3 125000
+#define BME_280_T_SB_TIMING_4 250000
+#define BME_280_T_SB_TIMING_5 500000
+#define BME_280_T_SB_TIMING_6 1000000
+#define BME_280_T_SB_TIMING_7 10000
+#define BME_280_T_SB_TIMING_8 20000
 // Lookup array
-uint32_t bme280_t_sb_timing_array[8];
+extern uint32_t bme280_t_sb_timing_array[8];
 
 // Lazy debug modes
 #define BME_280_DEBUG_MODE 1 //Defines if debug print statements are enabled. 0 for False 1>= for True. This will give feedback on each operational step.
@@ -272,7 +273,7 @@ struct bme280_measurements {
     int32_t T;
     uint32_t P;
     uint32_t H; 
-}
+};
 
 // Structure to store the current state of the chip
 struct bme280_model {

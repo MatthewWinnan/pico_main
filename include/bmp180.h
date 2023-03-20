@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "bmp180_i2c.h"
+#include "com_protocol.h"
 
 /* 
 Data sheet can be found at https://www.alldatasheet.com/view.jsp?Searchword=Bmp180%20Datasheet&gclid=Cj0KCQiAj4ecBhD3ARIsAM4Q_jFxw-ka2tDoSAq-hRVmDPUqWJLJljY-YAPnbkRwIM0BGLI8VaWa158aArfZEALw_wcB
@@ -162,9 +163,9 @@ struct bmp180_model {
 };
 
 //Mappings for the OSS mode of Pressure to variable input 
-uint16_t pressure_oss[4] ;
+extern uint16_t pressure_oss[4] ;
 //Mappings for out wait time in pressure mode
-uint16_t pressure_time[4] ;  
+extern uint16_t pressure_time[4] ;  
 
 void bmp180_get_cal(struct bmp180_calib_param* params,struct bmp180_model* my_chip);
 
@@ -187,6 +188,5 @@ void bmp180_get_measurement(struct bmp180_model* my_chip);
 void bmp180_get_altitude(struct bmp180_model* my_chip);
 // Get relative sea pressure
 void bmp180_get_sea_pressure(struct bmp180_model* my_chip);
-
 
 #endif

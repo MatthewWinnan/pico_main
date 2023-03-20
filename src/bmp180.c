@@ -1,6 +1,9 @@
 #include "../include/bmp180.h"
-#include "../include/com_protocol.h"
 // #include "com_protocol.c"
+
+// Define the variables here 
+uint16_t pressure_oss[4] = {0,0,0,0};
+uint16_t pressure_time[4] = {0,0,0,0};
 
 void bmp180_get_cal(struct bmp180_calib_param* params,struct bmp180_model* my_chip)
 {

@@ -17,6 +17,7 @@ include_directories(include
 src)
 
 # Tell CMake where to find the executable source file
+
 add_executable(${PROJECT_NAME} 
     main.c
     src/bmp180.c
@@ -29,6 +30,11 @@ add_executable(${PROJECT_NAME}
     src/bme280.c
     src/bme280_i2c.c
 )
+
+#Create libraries
+# target_include_directories(${PROJECT_NAME} PUBLIC
+# include
+# src)
 
 # Create map/bin/hex/uf2 files
 pico_add_extra_outputs(${PROJECT_NAME})

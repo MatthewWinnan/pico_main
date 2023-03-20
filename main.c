@@ -2,6 +2,15 @@
 //TODO
 //Define better non blocking sleep function
 
+// Initialize the variables here
+struct bmp180_model my_bmp180; //used as variable to pass to save the current BMP state.
+struct bmp180_calib_param my_bmp180_calib_params; //used as variable to pass to save calibration params. Used further in code.
+struct bmp180_measurements my_bmp180_measurements; //used as a variable to store intermitent steps.
+struct bme280_model my_bme280; //used as variable to pass to save the current BME280 state.
+struct bme280_calib_param my_bme280_calib_params; //used as variable to pass to save calibration params. Used further in code.
+struct bme280_settings my_bme280_settings; //Used to store the settings to be used be getters and setters
+struct lcb16b_eeprom my_eeprom; //Used as structure to store ID and pointer
+
 void toggle_led(uint8_t* led_state) {
 
     //Update the passed state

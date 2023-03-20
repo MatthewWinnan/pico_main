@@ -1,8 +1,11 @@
 #include "../include/com_protocol.h"
-#include "com_protocol.h"
 
 // TODO find some generic way to initialize cmd by using struct declared in main
 // TODO find out why I get the weird char malloc definitions. exe help)��@(kl
+
+// Define variables here
+queue_t call_queue;
+queue_t results_queue;
 
 // Increments some value within a defined space
 uint16_t safe_increment(uint16_t input, uint16_t max){
@@ -285,6 +288,9 @@ uint16_t read_stdin(char *buffer){
 // Init function
 void com_protocol_init()
 {
+    queue_t call_queue;
+    queue_t results_queue;
+
     queue_init(&call_queue, sizeof(queue_entry_t), COM_PROTO_QUEUE_LEN);
     queue_init(&results_queue, sizeof(queue_entry_t), COM_PROTO_QUEUE_LEN);
 

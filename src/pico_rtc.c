@@ -1,5 +1,8 @@
 #include "../include/pico_rtc.h"
 
+// Initialize the variables here
+datetime_t my_datetime;
+
 void init_pico_rtc(datetime_t * my_date){
     /*
     We only really need some day,hour,min,sec basis.
@@ -26,8 +29,9 @@ void init_pico_rtc(datetime_t * my_date){
     char datetime_buf[256];
     char *datetime_str = &datetime_buf[0];
     if (res){
-        datetime_to_str(datetime_str, sizeof(datetime_buf), &my_date);
-        printf("RTC has been set correctly to %s. \r\n",datetime_str);
+        //datetime_to_str(datetime_str, sizeof(datetime_buf), &my_date);
+        //printf("RTC has been set correctly to %s. \r\n",datetime_str);
+        printf("TODO RTC updated chenge the datetime_to_string command.");
     }
     else {
         printf("Warning RTC could not be set.");

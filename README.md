@@ -47,5 +47,10 @@ Further documentation is provided in the header com_protocol.h.
 
 Unlike the drivers this is PICO specific and will only work with the recommended PICO-SDK.
 
+A tutorial to set up communications to the pico can be viewed at https://www.youtube.com/watch?v=pbWhoJdYA1s
+Here the author uses minicom. The command *lsusb* can be used to check if the pico is currently being registered.
+The command ls */dev/tty* * will list all the communication ports. Generally the pico should list as a USB0 device.
+However for me it lists as /dev/ttyACM1. The tutorial also suggests turning off hardware flow control.
+
 So far the following communication modes have been implemented:
 1) USB - via the tinyUSB library and enabling pico_enable_stdio_usb(${PROJECT_NAME} 1) in the CMakeLists.txt in order to overwrite the stdin methods of C.
