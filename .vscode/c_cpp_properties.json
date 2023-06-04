@@ -7,12 +7,14 @@
                 "${PICO_SDK_PATH}/**",
                 "${PICO_SDK_PATH}/src/rp2_common/pico_multicore/include/pico/"
             ],
-            "defines": [],
-            "compilerPath": "/usr/bin/gcc",
-            "cStandard": "c11",
-            "cppStandard": "gnu++14",
-            "intelliSenseMode": "linux-gcc-x64",
-            "configurationProvider": "ms-vscode.makefile-tools"
+            "defines": [
+                "${default}"
+            ],
+            "intelliSenseMode": "${default}",
+            "cStandard": "${default}",
+            "cppStandard": "${default}",
+            "compilerPath": "/usr/bin/arm-none-eabi-gcc",
+            "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],
     "version": 4

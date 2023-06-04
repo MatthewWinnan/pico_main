@@ -127,7 +127,6 @@ void bmp180_get_up(struct bmp180_model* my_chip){
     bmp180_i2c_read(BMP_180_ADDR,&addr,read_buff,3,false);//We also read the XLSB 
     //Read in the final results
     //Equation is given at BMP180_DOC_15. 
-    long up = ((read_buff[0] << 16) | (read_buff[1] << 8) | read_buff[2]) >> (8 - BMP_180_OSS);//Remember MSB first
     my_chip->measurement_params->up = ((read_buff[0] << 16) | (read_buff[1] << 8) | read_buff[2]) >> (8 - BMP_180_OSS);//Remember MSB first
 }
 

@@ -53,3 +53,5 @@ dkms.conf
 
 # The main build folder is not needed
 build/
+
+.vscode/

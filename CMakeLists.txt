@@ -2,6 +2,7 @@
 cmake_minimum_required(VERSION 3.12)
 
 # Include build functions from Pico SDK
+set(PICO_SDK_PATH $ENV{PICO_SDK_PATH})
 include($ENV{PICO_SDK_PATH}/external/pico_sdk_import.cmake)
 
 # Set name of project (as PROJECT_NAME) and C/C%2B%2B standards
@@ -58,4 +59,3 @@ target_link_libraries(${PROJECT_NAME}
 # Enable usb output, disable uart output
 pico_enable_stdio_usb(${PROJECT_NAME} 1)
 pico_enable_stdio_uart(${PROJECT_NAME} 0)
-

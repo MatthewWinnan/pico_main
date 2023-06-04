@@ -1,4 +1,5 @@
 #include "../include/bme280.h"
+#include "bme280.h"
 
 // Initialize all external variables
 uint8_t bme280_osrs_h_mode_array[6] = {0,0,0,0,0,0};
@@ -95,7 +96,7 @@ void read_bme280_callibration_params(struct bme280_model *my_chip, struct bme280
     #endif
 }
 
-void bme280_init(struct bme280_model *my_chip, struct bme280_calib_param *params, struct bme280_settings *settings){
+void bme280_init(struct bme280_model *my_chip, struct bme280_calib_param *params, struct bme280_settings *settings, struct bme280_measurements *meas){
 
     // Wait for startup
     sleep_ms(BME_280_STARTUP_T);
@@ -176,6 +177,7 @@ void bme280_init(struct bme280_model *my_chip, struct bme280_calib_param *params
     my_chip->settings = settings;
 
     // Now set the initial conditions
+    my_chip->measure = meas;
     bme280_set_config(my_chip);
     bme280_set_ctrl_hum(my_chip); // because set_ctrl_hum also needs to set the ctrl_meas to take effect we only need to call this.
 
@@ -209,12 +211,18 @@ void bme280_set_config(struct bme280_model *my_chip){
     bme280_read_ctrl_meas(my_chip);
 
     uint8_t tmp_mode = my_chip->settings->mode; // Store the current mode value
+    uint8_t ctrl_result = 0;
     // Case 1 mode is at [1:0] BME280_DOC_25
     if ( tmp_mode != 0 )
     {
         // Case 2 set to sleep
+        // Have it block for now
         my_chip->settings->mode = 0;
-        bme280_set_ctrl_meas(my_chip);
+        ctrl_result = bme280_set_ctrl_meas(my_chip);
+        while (ctrl_result == BME280_BUSY) {
+            sleep_us(100);
+            ctrl_result = bme280_set_ctrl_meas(my_chip);
+        }
     }
 
     // Case 3 update the set_config
@@ -234,11 +242,16 @@ void bme280_set_config(struct bme280_model *my_chip){
     if ( tmp_mode != 0 ){
         // Case 4 we need to switch back to the original mode
         my_chip->settings->mode = tmp_mode;
-        bme280_set_ctrl_meas(my_chip);
+        // Have it block for now
+        ctrl_result = bme280_set_ctrl_meas(my_chip);
+        while (ctrl_result == BME280_BUSY) {
+            sleep_us(100);
+            ctrl_result = bme280_set_ctrl_meas(my_chip);
+        }
     }
 }
 
-void bme280_set_ctrl_meas(struct bme280_model *my_chip){
+uint8_t bme280_set_ctrl_meas(struct bme280_model *my_chip){
     /*
     We have the following consideration noted at BME_280_DOC_12
     "The supported mode transitions are shown in Figure 3. If the device is currently performing a
@@ -256,11 +269,12 @@ void bme280_set_ctrl_meas(struct bme280_model *my_chip){
 
     // First wait for measurements to stop
     while (bme280_is_doing_conversion()){
-    sleep_us(10);
+        return BME280_BUSY;
     }
 
     // Now update the mode
     bme280_i2c_write(BME_280_ADDR,write_buffer,2,false);
+    return BME280_OK;
 }
 
 void bme280_set_ctrl_hum(struct bme280_model *my_chip){
@@ -277,8 +291,12 @@ void bme280_set_ctrl_hum(struct bme280_model *my_chip){
     // Now update the mode
     bme280_i2c_write(BME_280_ADDR,write_buffer,2,false);
 
-    // In order to make changes stick send write to ctrl_meas
-    bme280_set_ctrl_meas(my_chip);
+    // In order to make changes stick send write to ctrl_meas. I want it to block for now.
+    uint8_t ctrl_result = bme280_set_ctrl_meas(my_chip);
+    while (ctrl_result == BME280_BUSY) {
+        sleep_us(100);
+        ctrl_result = bme280_set_ctrl_meas(my_chip);
+    }
 }
 
 // Define getter functions
@@ -388,4 +406,217 @@ bool bme280_is_doing_conversion(){
     }
     // TODO check if there is a time when bit 0 and 3 is low and rather use that since that is perfect inbetween
     return false;
+}
+
+/*
+Feel free to also look at the official GitHub for conversion functions.
+https://github.com/boschsensortec/BME280_driver/blob/master/bme280.c
+*/
+
+// Returns temperature in DegC, resolution is 0.01 DegC. Output value of “5123” equals 51.23 DegC.
+// t_fine carries fine temperature as global value
+void bme280_compensate_temp(struct bme280_model *my_chip){
+
+    int32_t temperature_min = -4000;
+    int32_t temperature_max = 8500;
+
+    my_chip->measure->T_1 = (int32_t)((my_chip->measure->adc_T / 8) - ((int32_t) my_chip->cal_params->dig_T1 * 2));
+    my_chip->measure->T_2 = (my_chip->measure->T_1 * ((int32_t)my_chip->cal_params->dig_T2)) / 2048;
+    my_chip->measure->T_3 = (int32_t)((my_chip->measure->adc_T / 16) - ((int32_t)my_chip->cal_params->dig_T1));
+    my_chip->measure->T_4 = (((my_chip->measure->T_3 * my_chip->measure->T_3) / 4096) * ((int32_t)my_chip->cal_params->dig_T3)) / 16384;
+
+    my_chip->measure->t_fine = my_chip->measure->T_2 + my_chip->measure->T_4;
+    int32_t temperature = (my_chip->measure->t_fine * 5 + 128) / 256;
+
+    if (temperature < temperature_min)
+    {
+        my_chip->measure->T = temperature_min;
+    }
+    else if (temperature > temperature_max)
+    {
+        my_chip->measure->T = temperature_max;
+    }
+    else {
+        my_chip->measure->T = temperature;
+    }
+
+}
+
+// Returns pressure in Pa as unsigned 32 bit integer in Q24.8 format (24 integer bits and 8 fractional bits).
+// Output value of “24674867” represents 24674867/256 = 96386.2 Pa = 963.862 hPa
+void bme280_compensate_press(struct bme280_model *my_chip){
+    uint32_t pressure;
+    uint32_t pressure_min = 3000000;
+    uint32_t pressure_max = 11000000;
+
+    my_chip->measure->P_1 = ((int64_t)my_chip->measure->t_fine) - 128000;
+    my_chip->measure->P_2 = my_chip->measure->P_1 * my_chip->measure->P_1 * (int64_t)my_chip->cal_params->dig_P6;
+    my_chip->measure->P_3 = my_chip->measure->P_2 + ((my_chip->measure->P_1 * (int64_t)my_chip->cal_params->dig_P5) * 131072);
+    my_chip->measure->P_4 = my_chip->measure->P_3 + (((int64_t)my_chip->cal_params->dig_P4) * 34359738368);
+    my_chip->measure->P_5 = ((my_chip->measure->P_1 * my_chip->measure->P_1 * (int64_t)my_chip->cal_params->dig_P3) / 256) + ((my_chip->measure->P_1 * ((int64_t)my_chip->cal_params->dig_P2) * 4096));
+    my_chip->measure->P_6 = ((int64_t)1) * 140737488355328;
+    my_chip->measure->P_7 = (my_chip->measure->P_6 + my_chip->measure->P_5) * ((int64_t)my_chip->cal_params->dig_P1) / 8589934592;
+
+    /* To avoid divide by zero exception */
+    if (my_chip->measure->P_7 != 0)
+    {
+        my_chip->measure->P_8 = 1048576 - my_chip->measure->adc_P;
+        my_chip->measure->P_9 = (((my_chip->measure->P_8 * INT64_C(2147483648)) - my_chip->measure->P_4) * 3125) / my_chip->measure->P_7;
+        my_chip->measure->P_10 = (((int64_t)my_chip->cal_params->dig_P9) * (my_chip->measure->P_9 / 8192) * (my_chip->measure->P_9 / 8192)) / 33554432;
+        my_chip->measure->P_11 = (((int64_t)my_chip->cal_params->dig_P8) * my_chip->measure->P_9) / 524288;
+        my_chip->measure->P_12 = ((my_chip->measure->P_9 + my_chip->measure->P_10 + my_chip->measure->P_11) / 256) + (((int64_t)my_chip->cal_params->dig_P7) * 16);
+        pressure = (uint32_t)(((my_chip->measure->P_12 / 2) * 100) / 128);
+
+        if (pressure < pressure_min)
+        {
+            my_chip->measure->P = pressure_min;
+        }
+        else if (pressure > pressure_max)
+        {
+            my_chip->measure->P = pressure_max;
+        }
+        else {
+            my_chip->measure->P = pressure;
+        }
+    }
+    else
+    {
+        my_chip->measure->P = pressure_min;
+    }
+}
+
+// Returns humidity in %RH as unsigned 32 bit integer in Q22.10 format (22 integer and 10 fractional bits).
+// Output value of “47445” represents 47445/1024 = 46.333 %RH
+
+void bme280_compensate_hum(struct bme280_model *my_chip)
+{
+    uint32_t humidity;
+    uint32_t humidity_max = 102400;
+
+    my_chip->measure->H_1 = my_chip->measure->t_fine - ((int32_t)76800);
+    my_chip->measure->H_2 = (int32_t)(my_chip->measure->adc_H * 16384);
+    my_chip->measure->H_3 = (int32_t)(((int32_t)my_chip->cal_params->dig_H4) * 1048576);
+    my_chip->measure->H_4 = ((int32_t)my_chip->cal_params->dig_H5) * my_chip->measure->H_1;
+    my_chip->measure->H_5 = (((my_chip->measure->H_2 - my_chip->measure->H_3) - my_chip->measure->H_4) + (int32_t)16384) / 32768;
+    my_chip->measure->H_6 = (my_chip->measure->H_1 * ((int32_t)my_chip->cal_params->dig_H6)) / 1024;
+    my_chip->measure->H_7 = (my_chip->measure->H_1 * ((int32_t)my_chip->cal_params->dig_H3)) / 2048;
+    my_chip->measure->H_8 = ((my_chip->measure->H_6 * (my_chip->measure->H_7 + (int32_t)32768)) / 1024) + (int32_t)2097152;
+    my_chip->measure->H_9 = ((my_chip->measure->H_8 * ((int32_t)my_chip->cal_params->dig_H2)) + 8192) / 16384;
+    my_chip->measure->H_10 = my_chip->measure->H_5 * my_chip->measure->H_9;
+    my_chip->measure->H_11 = ((my_chip->measure->H_10 / 32768) * (my_chip->measure->H_10 / 32768)) / 128;
+    my_chip->measure->H_12 = my_chip->measure->H_10 - ((my_chip->measure->H_11 * ((int32_t)my_chip->cal_params->dig_H1)) / 16);
+    my_chip->measure->H_13 = (my_chip->measure->H_12 < 0 ? 0 : my_chip->measure->H_12);
+    my_chip->measure->H_14 = (my_chip->measure->H_13 > 419430400 ? 419430400 : my_chip->measure->H_13);
+
+    humidity = (uint32_t)(my_chip->measure->H_14 / 4096);
+
+    if (humidity > humidity_max)
+    {
+        my_chip->measure->H = humidity_max;
+    }
+    else {
+        my_chip->measure->H = humidity;
+    }
+}
+
+uint8_t bme280_start_measurements(struct bme280_model *my_chip){
+
+    if (my_chip->settings->mode != 0b11){
+        // We first have to set the mode to FORCE
+        if (my_chip->settings->mode != 0b00){
+            return bme280_set_ctrl_meas(my_chip);
+        }
+        else {
+            // We are in sleep mode warn the user
+            #if BME_280_DEBUG_MODE
+            printf("WARNING: BME280 is currently in sleep mode. Please set to either force mode or normal mode.");
+            #endif
+            return BME280_SLEEP;
+        }
+        // First wait for measurements to stop
+        if (bme280_is_doing_conversion()){
+            return BME280_BUSY; // Return so Pico is not blocked
+        }
+    } 
+    
+    return BME280_OK;
+}
+
+uint8_t bme280_get_uncompensated_measurements(struct bme280_model *my_chip){
+    /*
+    BME280_DOC_21 suggests that one should rather perform a burst read from 0xF7 to 0xFE.
+    This also alows the data register shadowing mechanism to be in effect.
+    */
+
+
+    if (bme280_is_doing_conversion()){
+        return BME280_BUSY; // Return so Pico is not blocked
+    }
+
+    uint8_t addr = BME_280_REG_PRESS_MSB;
+    uint8_t read_buff[8] = {0};
+    bme280_i2c_read(BME_280_ADDR,&addr,read_buff,8,false);
+
+    // Read in the uncompensated data
+    my_chip->measure->adc_P = ((uint32_t)read_buff[0] << 12) | ((uint32_t)read_buff[1] << 4) | ((uint32_t)read_buff[2] >> 4);
+    my_chip->measure->adc_T = ((uint32_t)read_buff[3] << 12) | ((uint32_t)read_buff[4] << 4) | ((uint32_t)read_buff[5] >> 4);
+    my_chip->measure->adc_H = ((uint32_t)read_buff[6] << 8) | ((uint32_t)read_buff[7]);
+
+    return BME280_OK;
+}
+
+
+void bme280_get_compensated_measurements_blocked(struct bme280_model * my_chip)
+{
+    /*
+    As the name implies this function will only finish once BME280_OK is reached.
+    Thus the super process is blocked.
+    */
+    uint8_t status = bme280_start_measurements(my_chip);
+    
+    while (status == BME280_BUSY){
+        sleep_us(100);
+        status = bme280_start_measurements(my_chip);
+    }
+
+    if (status == BME280_SLEEP){
+        return;
+    }
+
+    status = bme280_get_uncompensated_measurements(my_chip);
+
+    while (status == BME280_BUSY){
+        sleep_us(100);
+        status = bme280_get_uncompensated_measurements(my_chip);
+    }
+
+    // Perform compensation
+    bme280_compensate_temp(my_chip);
+    bme280_compensate_press(my_chip);
+    bme280_compensate_hum(my_chip);
+
+
+}
+
+uint8_t bme280_get_compensated_measurements_non_blocked(struct bme280_model *my_chip){
+    /*
+    This mode is preferrable, however take care to call this function again if bme280 is still busy.
+    */
+    uint8_t status = bme280_start_measurements(my_chip);
+    
+    if (status != BME280_OK){
+        return status;
+    }
+
+    status = bme280_get_uncompensated_measurements(my_chip);
+
+    if (status != BME280_OK){
+        return status;
+    }
+
+    bme280_compensate_temp(my_chip);
+    bme280_compensate_press(my_chip);
+    bme280_compensate_hum(my_chip);
+
+    return BME280_OK;
 }

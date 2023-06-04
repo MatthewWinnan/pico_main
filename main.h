@@ -30,6 +30,7 @@ extern struct bmp180_measurements my_bmp180_measurements; //used as a variable t
 extern struct bme280_model my_bme280; //used as variable to pass to save the current BME280 state.
 extern struct bme280_calib_param my_bme280_calib_params; //used as variable to pass to save calibration params. Used further in code.
 extern struct bme280_settings my_bme280_settings; //Used to store the settings to be used be getters and setters
+extern struct bme280_measurements my_bme280_measurements; //used as a variable to store intermitent steps.
 
 //In order to use the 24LC16B eeprom driver initialize the needed object
 extern struct lcb16b_eeprom my_eeprom; //Used as structure to store ID and pointer

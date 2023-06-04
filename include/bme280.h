@@ -7,6 +7,11 @@
 #include "com_protocol.h"
 
 /*
+TODO:
+Seems to only be adding the final function to call the temp, hum and press readings.
+Settings seem to be done.
+Integrate with com protocol.
+
 Data sheet can be found at https://cdn-shop.adafruit.com/datasheets/BST-BME280_DS001-10.pdf
 
 For reference I will be using the code BME280_DOC whenever the data sheet is being used as a reference.
@@ -220,6 +225,11 @@ extern uint32_t bme280_t_sb_timing_array[8];
 #define BME_280_REG_CTRL_HUM _u(0xF2) // NB Changes to this register only become effective after a write operation to “ctrl_meas”
 #define BME_280_REG_RESET _u(0xE0) // Write 0xB6 for reset using the complete power-on-reset procedure
 
+// Measurement registers. Obtained from BME280_DOC_25
+#define BME_280_REG_HUM_MSB _u(0xFD)
+#define BME_280_REG_TEMP_MSB _u(0xFA)
+#define BME_280_REG_PRESS_MSB _u(0xF7)
+
 // Important structure declerations
 // Stores all the callibrated parameters shown at BME280_DOC_22 and BME280_DOC_23
 // An important fact is that unsigned integer values are stored in two’s complement BME280_DOC_22
@@ -264,12 +274,50 @@ struct bme280_settings {
 // Stores the sampled readings
 struct bme280_measurements {
     // Variable sizes are defined at BME280_DOC_23
+
+    // Raw values
     int32_t adc_T;
     int32_t adc_P;
     int32_t adc_H;
 
+    // Global fine temperature
     int32_t t_fine;
 
+    // Intermediate step values
+    int32_t T_1;
+    int32_t T_2;
+    int32_t T_3;
+    int32_t T_4;
+
+    int64_t P_1;
+    int64_t P_2;
+    int64_t P_3;
+    int64_t P_4;
+    int64_t P_5;
+    int64_t P_6;
+    int64_t P_7;
+    int64_t P_8;
+    int64_t P_9;
+    int64_t P_10;
+    int64_t P_11;
+    int64_t P_12;
+
+    int32_t H_1;
+    int32_t H_2;
+    int32_t H_3;
+    int32_t H_4;
+    int32_t H_5;
+    int32_t H_6;
+    int32_t H_7;
+    int32_t H_8;
+    int32_t H_9;
+    int32_t H_10;
+    int32_t H_11;
+    int32_t H_12;
+    int32_t H_13;
+    int32_t H_14;
+
+    // Compensated values
     int32_t T;
     uint32_t P;
     uint32_t H; 
@@ -279,19 +327,25 @@ struct bme280_measurements {
 struct bme280_model {
     struct bme280_calib_param *cal_params;
     struct bme280_settings *settings;
+    struct bme280_measurements *measure;
     uint8_t chipID;
 };
+
+// Return values
+#define BME280_OK 0
+#define BME280_SLEEP 1
+#define BME280_BUSY 2
 
 // Main functions
 
 // For initialization
-void bme280_init(struct bme280_model *my_chip, struct bme280_calib_param *params, struct bme280_settings *settings);
+void bme280_init(struct bme280_model *my_chip, struct bme280_calib_param *params, struct bme280_settings *settings, struct bme280_measurements *meas);
 void read_bme280_chip_id(struct bme280_model *my_chip);
 void read_bme280_callibration_params(struct bme280_model *my_chip, struct bme280_calib_param *params);
 
 // Define configuration functions
 void bme280_set_config(struct bme280_model *my_chip);
-void bme280_set_ctrl_meas(struct bme280_model *my_chip);
+uint8_t bme280_set_ctrl_meas(struct bme280_model *my_chip);
 void bme280_set_ctrl_hum(struct bme280_model *my_chip);
 
 // Define getter functions
@@ -300,5 +354,17 @@ void bme280_read_config(struct bme280_model *my_chip);
 void bme280_read_ctrl_hum(struct bme280_model *my_chip);
 void bme280_read_status(uint8_t *reg);
 bool bme280_is_doing_conversion();
+
+// Measurement functions
+uint8_t bme280_start_measurements(struct bme280_model *my_chip);
+uint8_t bme280_get_uncompensated_measurements(struct bme280_model *my_chip); // This function is non blocking, depending one 
+void bme280_get_compensated_measurements_blocked(struct bme280_model *my_chip);
+uint8_t bme280_get_compensated_measurements_non_blocked(struct bme280_model *my_chip);
+
+// Compensation functions. Formulae are found at BME280_DOC_23
+void bme280_compensate_temp(struct bme280_model *my_chip);
+void bme280_compensate_press(struct bme280_model *my_chip);
+void bme280_compensate_hum(struct bme280_model *my_chip);
+
 
 #endif
